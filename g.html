@@ -1,26 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Funny Games Hub</title>
   <style>
-    /* Basic reset */
-    * {
-      box-sizing: border-box;
-    }
+    /* Global Reset & Layout */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f0f0f0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #eaeaea;
       color: #333;
       line-height: 1.6;
     }
     header {
-      background: #007acc;
+      background: linear-gradient(135deg, #007acc, #005f99);
       color: #fff;
-      padding: 1em 0;
       text-align: center;
+      padding: 1em;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     nav {
       background: #005f99;
@@ -31,32 +29,26 @@
     nav a {
       color: #fff;
       text-decoration: none;
-      padding: 10px 20px;
+      padding: 12px 20px;
       margin: 5px;
       border-radius: 5px;
       background: #007acc;
       transition: background 0.3s;
     }
-    nav a:hover {
-      background: #005f99;
-    }
+    nav a:hover { background: #004f80; }
     .container {
-      max-width: 800px;
+      max-width: 1000px;
       margin: 20px auto;
       padding: 20px;
       background: #fff;
       border-radius: 8px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    .game-section {
-      display: none;
-    }
-    .game-section.active {
-      display: block;
-    }
+    .game-section { display: none; }
+    .game-section.active { display: block; }
     button {
-      padding: 10px 20px;
-      margin: 5px 5px 5px 0;
+      padding: 10px 15px;
+      margin: 10px 5px;
       border: none;
       border-radius: 5px;
       background: #007acc;
@@ -64,24 +56,95 @@
       cursor: pointer;
       transition: background 0.3s;
     }
-    button:hover {
-      background: #005f99;
-    }
-    /* Make sure it works well on tablets */
+    button:hover { background: #005f99; }
     @media (max-width: 768px) {
-      .container {
-        margin: 10px;
-        padding: 15px;
-      }
-      nav {
-        flex-direction: column;
-      }
+      .container { margin: 10px; padding: 15px; }
+      nav { flex-direction: column; }
     }
-    /* Simple styling for messages */
-    #hlMessage {
-      margin: 10px 0;
-      font-weight: bold;
+    /* Idle Miner Styles */
+    #idleMinerSection h2 { text-align: center; margin-bottom: 10px; }
+    #mineArea {
+      width: 100%;
+      height: 200px;
+      background: linear-gradient(135deg, #555, #333);
+      border: 2px solid #222;
+      border-radius: 10px;
+      position: relative;
+      margin-bottom: 15px;
+      cursor: pointer;
+      overflow: hidden;
     }
+    /* A large miner icon in the center */
+    #mineArea .minerIcon {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 4em;
+      pointer-events: none;
+      user-select: none;
+    }
+    /* Coin float animation */
+    .coin {
+      position: absolute;
+      font-size: 1.5em;
+      pointer-events: none;
+      animation: floatUp 1s ease-out forwards;
+    }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-50px); }
+    }
+    .idleStats { text-align: center; margin-bottom: 10px; }
+    .idleStats span { font-size: 1.2em; margin: 0 10px; }
+
+    /* Higher/Lower Card Styles */
+    #higherLowerSection { text-align: center; }
+    #hlCard {
+      width: 150px;
+      height: 200px;
+      margin: 20px auto;
+      background: #fff;
+      border: 4px solid #007acc;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3em;
+      perspective: 1000px;
+    }
+    /* We'll perform a simple flip by rotating the inner text */
+    #hlCard.flip {
+      animation: flipCard 0.6s forwards;
+    }
+    @keyframes flipCard {
+      0% { transform: rotateY(0deg); }
+      50% { transform: rotateY(90deg); }
+      100% { transform: rotateY(0deg); }
+    }
+    #hlButtons { margin-top: 10px; }
+    #hlButtons button { font-size: 1.5em; padding: 15px 20px; }
+
+    /* Plinko Styles */
+    #plinkoSection { text-align: center; }
+    #plinkoCanvas {
+      border: 2px solid #007acc;
+      border-radius: 10px;
+      background: #fafafa;
+      display: block;
+      margin: 0 auto 10px;
+    }
+    #plinkoScoreDisplay { margin: 10px; font-size: 1.2em; }
+
+    /* Roulette Styles */
+    #rouletteSection { text-align: center; }
+    #rouletteCanvas {
+      border: 2px solid #007acc;
+      border-radius: 50%;
+      background: #fafafa;
+      display: block;
+      margin: 0 auto 10px;
+    }
+    #rouletteResult { font-size: 1.5em; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -92,61 +155,83 @@
     <a href="#" data-target="aboutSection">About</a>
     <a href="#" data-target="idleMinerSection">Idle Miner</a>
     <a href="#" data-target="higherLowerSection">Higher/Lower</a>
+    <a href="#" data-target="plinkoSection">Plinko</a>
+    <a href="#" data-target="rouletteSection">Roulette</a>
   </nav>
   <div class="container">
     <!-- About Section -->
     <div id="aboutSection" class="game-section active">
-      <h2>Welcome!</h2>
-      <p>Select one of the games above to get started. Enjoy mining coins or testing your luck with higher or lower guesses!</p>
+      <h2>Welcome to the Funny Games Hub!</h2>
+      <p>Enjoy our visually enhanced games. Tap on the miner to mine coins, flip the card to guess higher or lower, drop a ball in Plinko and watch it bounce, or try your luck spinning the Roulette wheel.</p>
     </div>
 
     <!-- Idle Miner Game Section -->
     <div id="idleMinerSection" class="game-section">
       <h2>Idle Miner</h2>
-      <p>Click the button to mine coins. Use your coins to buy upgrades and hire miners that mine automatically every second!</p>
-      <p><strong>Coins:</strong> <span id="idleCoins">0</span></p>
-      <p><strong>Click Power:</strong> <span id="idleClickPower">1</span></p>
-      <p><strong>Miners:</strong> <span id="idleMiners">0</span></p>
-      <button id="mineButton">Mine!</button>
-      <button id="upgradePickaxeButton">
-        Buy Pickaxe Upgrade (Cost: <span id="pickaxeCost">10</span> coins)
-      </button>
-      <button id="hireMinerButton">
-        Hire Miner (Cost: <span id="minerCost">50</span> coins)
-      </button>
-      <br>
-      <button id="resetIdleButton" style="background: #cc0000;">Reset Idle Miner</button>
+      <div id="mineArea">
+        <div class="minerIcon">⛏️</div>
+      </div>
+      <div class="idleStats">
+        <span>Coins: <span id="idleCoins">0</span></span>
+        <span>Power: <span id="idleClickPower">1</span></span>
+        <span>Miners: <span id="idleMiners">0</span></span>
+      </div>
+      <div style="text-align:center;">
+        <button id="upgradePickaxeButton">Upgrade Pickaxe<br>(Cost: <span id="pickaxeCost">10</span>)</button>
+        <button id="hireMinerButton">Hire Miner<br>(Cost: <span id="minerCost">50</span>)</button>
+        <button id="resetIdleButton" style="background:#cc0000;">Reset</button>
+      </div>
     </div>
 
     <!-- Higher/Lower Game Section -->
     <div id="higherLowerSection" class="game-section">
       <h2>Higher/Lower</h2>
-      <p>Guess if the next number (1–100) will be <strong>higher</strong> or <strong>lower</strong> than the current one!</p>
-      <p><strong>Current Number:</strong> <span id="hlCurrentNumber"></span></p>
-      <p><strong>Your Score:</strong> <span id="hlScore">0</span></p>
-      <div id="hlMessage"></div>
-      <button id="higherButton">Higher</button>
-      <button id="lowerButton">Lower</button>
-      <br>
-      <button id="resetHLButton" style="background: #cc0000;">Reset Higher/Lower</button>
+      <div id="hlCard">0</div>
+      <div id="hlScoreDisplay">Score: <span id="hlScore">0</span></div>
+      <div id="hlButtons">
+        <button id="higherButton">▲</button>
+        <button id="lowerButton">▼</button>
+        <button id="resetHLButton" style="background:#cc0000;">Reset</button>
+      </div>
+    </div>
+
+    <!-- Plinko Game Section -->
+    <div id="plinkoSection" class="game-section">
+      <h2>Plinko</h2>
+      <canvas id="plinkoCanvas" width="400" height="600"></canvas>
+      <div id="plinkoScoreDisplay">Plinko Score: <span id="plinkoScore">0</span></div>
+      <button id="dropBallButton">Drop Ball</button>
+      <button id="resetPlinkoButton" style="background:#cc0000;">Reset</button>
+    </div>
+
+    <!-- Roulette Game Section -->
+    <div id="rouletteSection" class="game-section">
+      <h2>Roulette</h2>
+      <canvas id="rouletteCanvas" width="400" height="400"></canvas>
+      <button id="spinRouletteButton">Spin</button>
+      <div id="rouletteResult">Result: ?</div>
     </div>
   </div>
 
   <script>
-    /* Navigation: show/hide game sections */
-    document.querySelectorAll('nav a').forEach(function(link) {
+    /*******************************
+     * Navigation
+     *******************************/
+    document.querySelectorAll('nav a').forEach(link => {
       link.addEventListener('click', function(e) {
         e.preventDefault();
-        var targetId = this.getAttribute('data-target');
-        document.querySelectorAll('.game-section').forEach(function(section) {
+        const target = this.getAttribute('data-target');
+        document.querySelectorAll('.game-section').forEach(section => {
           section.classList.remove('active');
         });
-        document.getElementById(targetId).classList.add('active');
+        document.getElementById(target).classList.add('active');
       });
     });
 
-    /* ----------------- Idle Miner Game ----------------- */
-    var idleData = {
+    /*******************************
+     * Idle Miner Game
+     *******************************/
+    let idleData = {
       coins: 0,
       clickPower: 1,
       miners: 0,
@@ -155,17 +240,13 @@
     };
 
     function loadIdleData() {
-      var saved = localStorage.getItem('idleMinerData');
-      if (saved) {
-        idleData = JSON.parse(saved);
-      }
+      const saved = localStorage.getItem('idleMinerData');
+      if (saved) idleData = JSON.parse(saved);
       updateIdleDisplay();
     }
-
     function saveIdleData() {
       localStorage.setItem('idleMinerData', JSON.stringify(idleData));
     }
-
     function updateIdleDisplay() {
       document.getElementById('idleCoins').innerText = Math.floor(idleData.coins);
       document.getElementById('idleClickPower').innerText = idleData.clickPower;
@@ -174,10 +255,22 @@
       document.getElementById('minerCost').innerText = Math.floor(idleData.minerCost);
     }
 
-    document.getElementById('mineButton').addEventListener('click', function() {
+    // When user clicks the mine area, add coins and spawn an animated coin
+    document.getElementById('mineArea').addEventListener('click', function(e) {
       idleData.coins += idleData.clickPower;
       updateIdleDisplay();
       saveIdleData();
+      // Create a coin element at the click position
+      const coin = document.createElement('div');
+      coin.className = 'coin';
+      coin.innerText = '💰';
+      // Get click coordinates relative to mineArea
+      const rect = this.getBoundingClientRect();
+      coin.style.left = (e.clientX - rect.left) + 'px';
+      coin.style.top = (e.clientY - rect.top) + 'px';
+      this.appendChild(coin);
+      // Remove coin after animation
+      coin.addEventListener('animationend', () => coin.remove());
     });
 
     document.getElementById('upgradePickaxeButton').addEventListener('click', function() {
@@ -188,10 +281,9 @@
         updateIdleDisplay();
         saveIdleData();
       } else {
-        alert("Not enough coins for a pickaxe upgrade!");
+        alert("Not enough coins!");
       }
     });
-
     document.getElementById('hireMinerButton').addEventListener('click', function() {
       if (idleData.coins >= idleData.minerCost) {
         idleData.coins -= idleData.minerCost;
@@ -200,110 +292,293 @@
         updateIdleDisplay();
         saveIdleData();
       } else {
-        alert("Not enough coins to hire a miner!");
+        alert("Not enough coins!");
       }
     });
-
     document.getElementById('resetIdleButton').addEventListener('click', function() {
-      if (confirm("Are you sure you want to reset the Idle Miner game?")) {
-        idleData = {
-          coins: 0,
-          clickPower: 1,
-          miners: 0,
-          pickaxeCost: 10,
-          minerCost: 50
-        };
+      if (confirm("Reset Idle Miner?")) {
+        idleData = { coins: 0, clickPower: 1, miners: 0, pickaxeCost: 10, minerCost: 50 };
         updateIdleDisplay();
         saveIdleData();
       }
     });
-
-    // Auto-mine: each miner adds 1 coin per second
-    setInterval(function() {
+    // Auto-mining every second
+    setInterval(() => {
       if (idleData.miners > 0) {
         idleData.coins += idleData.miners;
         updateIdleDisplay();
         saveIdleData();
       }
     }, 1000);
+    loadIdleData();
 
-    /* ---------------- Higher/Lower Game ---------------- */
-    var hlData = {
-      currentNumber: 0,
-      score: 0
-    };
-
+    /*******************************
+     * Higher/Lower Game
+     *******************************/
+    let hlData = { currentNumber: 0, score: 0 };
     function startHLGame() {
       hlData.currentNumber = Math.floor(Math.random() * 100) + 1;
       hlData.score = 0;
     }
-
     function loadHLData() {
-      var saved = localStorage.getItem('hlGameData');
-      if (saved) {
-        hlData = JSON.parse(saved);
-      } else {
-        startHLGame();
-      }
+      const saved = localStorage.getItem('hlGameData');
+      if (saved) hlData = JSON.parse(saved);
+      else startHLGame();
       updateHLDisplay();
     }
-
     function saveHLData() {
       localStorage.setItem('hlGameData', JSON.stringify(hlData));
     }
-
     function updateHLDisplay() {
-      document.getElementById('hlCurrentNumber').innerText = hlData.currentNumber;
+      document.getElementById('hlCard').innerText = hlData.currentNumber;
       document.getElementById('hlScore').innerText = hlData.score;
-      document.getElementById('hlMessage').innerText = "";
     }
-
+    function flipHLCard(newNumber) {
+      const card = document.getElementById('hlCard');
+      card.classList.add('flip');
+      setTimeout(() => {
+        card.innerText = newNumber;
+        card.classList.remove('flip');
+      }, 600);
+    }
     document.getElementById('higherButton').addEventListener('click', function() {
-      var nextNumber = Math.floor(Math.random() * 100) + 1;
-      if (nextNumber > hlData.currentNumber) {
+      const next = Math.floor(Math.random() * 100) + 1;
+      if (next > hlData.currentNumber) {
         hlData.score++;
-        document.getElementById('hlMessage').innerText = "Correct! Next number was " + nextNumber;
-        hlData.currentNumber = nextNumber;
-        updateHLDisplay();
-        saveHLData();
+        flipHLCard(next);
+        hlData.currentNumber = next;
       } else {
-        document.getElementById('hlMessage').innerText = "Wrong! Next number was " + nextNumber + ". Game Over!";
-        alert("Game Over! Your score: " + hlData.score);
+        alert("Wrong! Game Over. Score: " + hlData.score);
         startHLGame();
-        updateHLDisplay();
-        saveHLData();
       }
+      updateHLDisplay();
+      saveHLData();
     });
-
     document.getElementById('lowerButton').addEventListener('click', function() {
-      var nextNumber = Math.floor(Math.random() * 100) + 1;
-      if (nextNumber < hlData.currentNumber) {
+      const next = Math.floor(Math.random() * 100) + 1;
+      if (next < hlData.currentNumber) {
         hlData.score++;
-        document.getElementById('hlMessage').innerText = "Correct! Next number was " + nextNumber;
-        hlData.currentNumber = nextNumber;
-        updateHLDisplay();
-        saveHLData();
+        flipHLCard(next);
+        hlData.currentNumber = next;
       } else {
-        document.getElementById('hlMessage').innerText = "Wrong! Next number was " + nextNumber + ". Game Over!";
-        alert("Game Over! Your score: " + hlData.score);
+        alert("Wrong! Game Over. Score: " + hlData.score);
         startHLGame();
-        updateHLDisplay();
-        saveHLData();
       }
+      updateHLDisplay();
+      saveHLData();
     });
-
     document.getElementById('resetHLButton').addEventListener('click', function() {
-      if (confirm("Reset the Higher/Lower game?")) {
+      if (confirm("Reset Higher/Lower?")) {
         startHLGame();
         updateHLDisplay();
         saveHLData();
       }
     });
-
-    /* ---------------- Initialization ---------------- */
-    // Since the script is at the end of the body, elements are already loaded.
-    loadIdleData();
     loadHLData();
+
+    /*******************************
+     * Plinko Game
+     *******************************/
+    const plinkoCanvas = document.getElementById('plinkoCanvas');
+    const plinkoCtx = plinkoCanvas.getContext('2d');
+    const plinkoWidth = plinkoCanvas.width;
+    const plinkoHeight = plinkoCanvas.height;
+    let plinkoScore = 0;
+    let plinkoBalls = []; // array of active balls
+    const plinkoPegs = [];
+    const pegRows = 8;
+    const pegSpacingX = plinkoWidth / 9;
+    const pegSpacingY = 60;
+    const pegRadius = 5;
+    // Generate pegs in offset rows
+    for (let row = 0; row < pegRows; row++) {
+      let offset = (row % 2 === 0) ? pegSpacingX / 2 : 0;
+      let numPegs = Math.floor(plinkoWidth / pegSpacingX);
+      for (let i = 0; i < numPegs; i++) {
+        plinkoPegs.push({
+          x: offset + i * pegSpacingX,
+          y: 50 + row * pegSpacingY,
+          r: pegRadius
+        });
+      }
+    }
+    // Define bins at bottom (for simplicity, 8 bins)
+    const binCount = 8;
+    const binWidth = plinkoWidth / binCount;
+    const binScores = []; // assign random scores between 1 and 10 to each bin
+    for (let i = 0; i < binCount; i++) {
+      binScores.push(Math.floor(Math.random() * 10) + 1);
+    }
+    function loadPlinkoScore() {
+      const saved = localStorage.getItem('plinkoScore');
+      if (saved) plinkoScore = parseInt(saved);
+      document.getElementById('plinkoScore').innerText = plinkoScore;
+    }
+    function savePlinkoScore() {
+      localStorage.setItem('plinkoScore', plinkoScore);
+    }
+    // Ball constructor
+    function Ball(x, y) {
+      this.x = x;
+      this.y = y;
+      this.r = 8;
+      this.vx = (Math.random() - 0.5) * 4;
+      this.vy = 0;
+    }
+    // Simple physics update for balls
+    function updatePlinko() {
+      plinkoCtx.clearRect(0, 0, plinkoWidth, plinkoHeight);
+      // Draw bins at bottom
+      for (let i = 0; i < binCount; i++) {
+        plinkoCtx.fillStyle = "#ddd";
+        plinkoCtx.fillRect(i * binWidth, plinkoHeight - 30, binWidth, 30);
+        plinkoCtx.fillStyle = "#333";
+        plinkoCtx.font = "14px sans-serif";
+        plinkoCtx.textAlign = "center";
+        plinkoCtx.fillText(binScores[i], i * binWidth + binWidth/2, plinkoHeight - 10);
+      }
+      // Draw pegs
+      plinkoCtx.fillStyle = "#007acc";
+      plinkoPegs.forEach(peg => {
+        plinkoCtx.beginPath();
+        plinkoCtx.arc(peg.x, peg.y, peg.r, 0, Math.PI * 2);
+        plinkoCtx.fill();
+      });
+      // Update and draw balls
+      for (let b = plinkoBalls.length - 1; b >= 0; b--) {
+        const ball = plinkoBalls[b];
+        // Apply gravity
+        ball.vy += 0.3;
+        ball.x += ball.vx;
+        ball.y += ball.vy;
+        // Wall collision
+        if (ball.x < ball.r || ball.x > plinkoWidth - ball.r) {
+          ball.vx *= -1;
+        }
+        // Peg collisions
+        plinkoPegs.forEach(peg => {
+          const dx = ball.x - peg.x;
+          const dy = ball.y - peg.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < ball.r + peg.r) {
+            // Simple collision: push ball away
+            const angle = Math.atan2(dy, dx);
+            ball.vx = Math.cos(angle) * 2;
+            ball.vy = Math.sin(angle) * 2;
+          }
+        });
+        // Draw ball
+        plinkoCtx.fillStyle = "#e67e22";
+        plinkoCtx.beginPath();
+        plinkoCtx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+        plinkoCtx.fill();
+        // Check if ball reached bottom (bins)
+        if (ball.y + ball.r > plinkoHeight - 30) {
+          // Determine bin index
+          const binIndex = Math.floor(ball.x / binWidth);
+          plinkoScore += binScores[binIndex];
+          document.getElementById('plinkoScore').innerText = plinkoScore;
+          savePlinkoScore();
+          // Remove ball
+          plinkoBalls.splice(b, 1);
+        }
+      }
+      requestAnimationFrame(updatePlinko);
+    }
+    document.getElementById('dropBallButton').addEventListener('click', function() {
+      // Drop ball from top center (or random near center)
+      plinkoBalls.push(new Ball(plinkoWidth/2 + (Math.random()-0.5)*50, 20));
+    });
+    document.getElementById('resetPlinkoButton').addEventListener('click', function() {
+      if (confirm("Reset Plinko score?")) {
+        plinkoScore = 0;
+        document.getElementById('plinkoScore').innerText = plinkoScore;
+        savePlinkoScore();
+      }
+    });
+    loadPlinkoScore();
+    updatePlinko();
+
+    /*******************************
+     * Roulette Game
+     *******************************/
+    const rouletteCanvas = document.getElementById('rouletteCanvas');
+    const rouletteCtx = rouletteCanvas.getContext('2d');
+    const rouletteWidth = rouletteCanvas.width;
+    const rouletteHeight = rouletteCanvas.height;
+    const segments = 12;
+    let rouletteAngle = 0;
+    let rouletteAngularVelocity = 0;
+    let rouletteSpinning = false;
+    // Prepare segments with numbers and colors (alternating)
+    const rouletteSegments = [];
+    for (let i = 0; i < segments; i++) {
+      rouletteSegments.push({
+        number: i + 1,
+        color: (i % 2 === 0) ? "#e74c3c" : "#2ecc71"
+      });
+    }
+    function drawRoulette() {
+      rouletteCtx.clearRect(0, 0, rouletteWidth, rouletteHeight);
+      const centerX = rouletteWidth / 2;
+      const centerY = rouletteHeight / 2;
+      const radius = Math.min(centerX, centerY) - 20;
+      const segmentAngle = (Math.PI * 2) / segments;
+      // Draw each segment
+      for (let i = 0; i < segments; i++) {
+        const startAngle = rouletteAngle + i * segmentAngle;
+        rouletteCtx.beginPath();
+        rouletteCtx.moveTo(centerX, centerY);
+        rouletteCtx.arc(centerX, centerY, radius, startAngle, startAngle + segmentAngle);
+        rouletteCtx.closePath();
+        rouletteCtx.fillStyle = rouletteSegments[i].color;
+        rouletteCtx.fill();
+        rouletteCtx.strokeStyle = "#fff";
+        rouletteCtx.stroke();
+        // Draw number
+        rouletteCtx.save();
+        rouletteCtx.translate(centerX, centerY);
+        rouletteCtx.rotate(startAngle + segmentAngle/2);
+        rouletteCtx.textAlign = "right";
+        rouletteCtx.fillStyle = "#fff";
+        rouletteCtx.font = "bold 18px sans-serif";
+        rouletteCtx.fillText(rouletteSegments[i].number, radius - 10, 8);
+        rouletteCtx.restore();
+      }
+      // Draw pointer at top
+      rouletteCtx.fillStyle = "#333";
+      rouletteCtx.beginPath();
+      rouletteCtx.moveTo(centerX, 10);
+      rouletteCtx.lineTo(centerX - 10, 30);
+      rouletteCtx.lineTo(centerX + 10, 30);
+      rouletteCtx.closePath();
+      rouletteCtx.fill();
+    }
+    function updateRoulette() {
+      if (rouletteSpinning) {
+        rouletteAngle += rouletteAngularVelocity;
+        rouletteAngularVelocity *= 0.985; // friction
+        if (rouletteAngularVelocity < 0.002) {
+          rouletteAngularVelocity = 0;
+          rouletteSpinning = false;
+          // Determine winning segment
+          let normalized = rouletteAngle % (Math.PI * 2);
+          if (normalized < 0) normalized += Math.PI * 2;
+          const seg = Math.floor((Math.PI * 2 - normalized) / ((Math.PI * 2)/segments)) % segments;
+          document.getElementById('rouletteResult').innerText = "Result: " + rouletteSegments[seg].number;
+        }
+      }
+      drawRoulette();
+      requestAnimationFrame(updateRoulette);
+    }
+    document.getElementById('spinRouletteButton').addEventListener('click', function() {
+      if (!rouletteSpinning) {
+        rouletteAngularVelocity = Math.random() * 0.3 + 0.3;
+        rouletteSpinning = true;
+        document.getElementById('rouletteResult').innerText = "Spinning...";
+      }
+    });
+    updateRoulette();
   </script>
 </body>
 </html>
