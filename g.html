@@ -1,27 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Funny Games Hub</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Game Center</title>
   <style>
-    /* Global Reset & Layout */
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* CSS Variables for Light Mode */
+    :root {
+      --bg-light: #f0f0f0;
+      --text-light: #333;
+      --container-light: #fff;
+      --header-light: linear-gradient(135deg, #4285F4, #3367D6);
+      --nav-light: #3367D6;
+      --button-light: #4285F4;
+      --button-hover-light: #3367D6;
+    }
+    /* Global Styles */
     body {
+      margin: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #eaeaea;
-      color: #333;
+      background: var(--bg-light);
+      color: var(--text-light);
       line-height: 1.6;
+      transition: background 0.3s, color 0.3s;
     }
     header {
-      background: linear-gradient(135deg, #007acc, #005f99);
+      background: var(--header-light);
       color: #fff;
       text-align: center;
       padding: 1em;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     nav {
-      background: #005f99;
+      background: var(--nav-light);
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
@@ -32,17 +43,18 @@
       padding: 12px 20px;
       margin: 5px;
       border-radius: 5px;
-      background: #007acc;
+      background: var(--button-light);
       transition: background 0.3s;
     }
-    nav a:hover { background: #004f80; }
+    nav a:hover { background: var(--button-hover-light); }
     .container {
       max-width: 1000px;
       margin: 20px auto;
       padding: 20px;
-      background: #fff;
+      background: var(--container-light);
       border-radius: 8px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      transition: background 0.3s;
     }
     .game-section { display: none; }
     .game-section.active { display: block; }
@@ -51,18 +63,49 @@
       margin: 10px 5px;
       border: none;
       border-radius: 5px;
-      background: #007acc;
+      background: var(--button-light);
       color: #fff;
       cursor: pointer;
       transition: background 0.3s;
     }
-    button:hover { background: #005f99; }
+    button:hover { background: var(--button-hover-light); }
+    input[type="number"] {
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      width: 60px;
+    }
     @media (max-width: 768px) {
       .container { margin: 10px; padding: 15px; }
       nav { flex-direction: column; }
     }
+    /* Dark Mode Styles */
+    body.dark {
+      background: #121212;
+      color: #e0e0e0;
+    }
+    body.dark .container {
+      background: #1e1e1e;
+      box-shadow: 0 0 10px rgba(255,255,255,0.1);
+    }
+    body.dark header {
+      background: linear-gradient(135deg, #333, #555);
+    }
+    body.dark nav {
+      background: #333;
+    }
+    body.dark nav a {
+      background: #444;
+      color: #e0e0e0;
+    }
+    body.dark nav a:hover {
+      background: #555;
+    }
+    body.dark #plinkoCanvas, body.dark .reel {
+      border-color: #444;
+      background: #333;
+    }
     /* Idle Miner Styles */
-    #idleMinerSection h2 { text-align: center; margin-bottom: 10px; }
     #mineArea {
       width: 100%;
       height: 200px;
@@ -74,16 +117,15 @@
       cursor: pointer;
       overflow: hidden;
     }
-    /* A large miner icon in the center */
     #mineArea .minerIcon {
       position: absolute;
-      top: 50%; left: 50%;
+      top: 50%;
+      left: 50%;
       transform: translate(-50%, -50%);
       font-size: 4em;
       pointer-events: none;
       user-select: none;
     }
-    /* Floating coin animation */
     .coin {
       position: absolute;
       font-size: 1.5em;
@@ -94,17 +136,13 @@
       0% { opacity: 1; transform: translateY(0); }
       100% { opacity: 0; transform: translateY(-50px); }
     }
-    .idleStats { text-align: center; margin-bottom: 10px; }
-    .idleStats span { font-size: 1.2em; margin: 0 10px; }
-
-    /* Higher/Lower Card Styles */
-    #higherLowerSection { text-align: center; }
+    /* Higher/Lower Styles */
     #hlCard {
       width: 150px;
       height: 200px;
       margin: 20px auto;
       background: #fff;
-      border: 4px solid #007acc;
+      border: 4px solid var(--button-light);
       border-radius: 10px;
       display: flex;
       align-items: center;
@@ -112,7 +150,6 @@
       font-size: 3em;
       perspective: 1000px;
     }
-    /* Simple flip animation */
     #hlCard.flip {
       animation: flipCard 0.6s forwards;
     }
@@ -121,31 +158,22 @@
       50% { transform: rotateY(90deg); }
       100% { transform: rotateY(0deg); }
     }
-    #hlButtons { margin-top: 10px; }
+    #hlButtons { margin-top: 10px; text-align: center; }
     #hlButtons button { font-size: 1.5em; padding: 15px 20px; }
-
+    #hlPrevDisplay { margin-top: 10px; font-size: 1.2em; text-align: center; }
     /* Plinko Styles */
-    #plinkoSection { text-align: center; }
     #plinkoCanvas {
-      border: 2px solid #007acc;
+      border: 2px solid var(--button-light);
       border-radius: 10px;
       background: #fafafa;
       display: block;
-      margin: 0 auto 10px;
+      margin: 10px auto;
     }
-    #plinkoScoreDisplay { margin: 10px; font-size: 1.2em; }
-
     /* Slot Machine Styles */
-    #slotMachineSection { text-align: center; }
-    #slotMachine {
-      display: flex;
-      justify-content: center;
-      margin: 20px 0;
-    }
     .reel {
       width: 80px;
       height: 80px;
-      border: 2px solid #007acc;
+      border: 2px solid var(--button-light);
       border-radius: 10px;
       margin: 0 10px;
       font-size: 3em;
@@ -153,15 +181,20 @@
       align-items: center;
       justify-content: center;
       background: #fafafa;
+      transition: transform 0.3s;
     }
-    #slotBalanceDisplay { margin: 10px 0; font-size: 1.2em; }
-    #slotResult { font-size: 1.4em; margin-top: 10px; }
-    #slotControls { margin: 10px 0; }
+    .reel.spinning {
+      animation: spinAnimation 0.5s linear infinite;
+    }
+    @keyframes spinAnimation {
+      from { transform: rotateX(0deg); }
+      to { transform: rotateX(360deg); }
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>Funny Games Hub</h1>
+    <h1>Game Center</h1>
   </header>
   <nav>
     <a href="#" data-target="aboutSection">About</a>
@@ -169,88 +202,111 @@
     <a href="#" data-target="higherLowerSection">Higher/Lower</a>
     <a href="#" data-target="plinkoSection">Plinko</a>
     <a href="#" data-target="slotMachineSection">Slot Machine</a>
+    <a href="#" id="toggleDarkMode">Toggle Dark Mode</a>
   </nav>
   <div class="container">
     <!-- About Section -->
     <div id="aboutSection" class="game-section active">
-      <h2>Welcome to the Funny Games Hub!</h2>
-      <p>Enjoy our visually enhanced games. Tap the miner to mine coins, flip the card to guess higher or lower, drop a ball in Plinko and watch it bounce realistically, or try your luck on the slot machine with three spinning reels!</p>
+      <h2>Welcome!</h2>
+      <p>Use your Idle Miner coins across all games. Mine coins, then bet in Plinko and on the Slot Machine or test your luck in Higher/Lower.</p>
     </div>
-
-    <!-- Idle Miner Game Section -->
+    <!-- Idle Miner Section -->
     <div id="idleMinerSection" class="game-section">
       <h2>Idle Miner</h2>
       <div id="mineArea">
         <div class="minerIcon">⛏️</div>
       </div>
-      <div class="idleStats">
-        <span>Coins: <span id="idleCoins">0</span></span>
-        <span>Power: <span id="idleClickPower">1</span></span>
-        <span>Miners: <span id="idleMiners">0</span></span>
-      </div>
       <div style="text-align:center;">
+        <span>Coins: <span id="idleCoins">0</span></span>
+        <span style="margin-left:20px;">Power: <span id="idleClickPower">1</span></span>
+        <span style="margin-left:20px;">Miners: <span id="idleMiners">0</span></span>
+      </div>
+      <div style="text-align:center; margin-top:10px;">
         <button id="upgradePickaxeButton">Upgrade Pickaxe<br>(Cost: <span id="pickaxeCost">10</span>)</button>
         <button id="hireMinerButton">Hire Miner<br>(Cost: <span id="minerCost">50</span>)</button>
         <button id="resetIdleButton" style="background:#cc0000;">Reset</button>
       </div>
     </div>
-
-    <!-- Higher/Lower Game Section -->
+    <!-- Higher/Lower Section -->
     <div id="higherLowerSection" class="game-section">
       <h2>Higher/Lower</h2>
       <div id="hlCard">0</div>
-      <div id="hlScoreDisplay">Score: <span id="hlScore">0</span></div>
+      <div style="text-align:center; margin-top:10px;">
+        Score: <span id="hlScore">0</span>
+      </div>
+      <div id="hlPrevDisplay">Previous: N/A</div>
       <div id="hlButtons">
         <button id="higherButton">▲</button>
         <button id="lowerButton">▼</button>
         <button id="resetHLButton" style="background:#cc0000;">Reset</button>
       </div>
     </div>
-
-    <!-- Plinko Game Section -->
+    <!-- Plinko Section -->
     <div id="plinkoSection" class="game-section">
       <h2>Plinko</h2>
+      <div style="text-align:center; margin-bottom:10px;">
+        Balance: <span id="globalBalancePlinko">0</span>
+      </div>
+      <div style="text-align:center; margin-bottom:10px;">
+        <label for="plinkoBet">Bet Amount:</label>
+        <input type="number" id="plinkoBet" value="10" min="1">
+      </div>
       <canvas id="plinkoCanvas" width="400" height="600"></canvas>
-      <div id="plinkoScoreDisplay">Plinko Score: <span id="plinkoScore">0</span></div>
-      <button id="dropBallButton">Drop Ball</button>
-      <button id="resetPlinkoButton" style="background:#cc0000;">Reset</button>
+      <div style="text-align:center; margin-top:10px;">
+        <button id="dropBallButton">Drop Ball</button>
+        <button id="resetPlinkoButton" style="background:#cc0000;">Reset</button>
+      </div>
     </div>
-
-    <!-- Slot Machine Game Section -->
+    <!-- Slot Machine Section -->
     <div id="slotMachineSection" class="game-section">
       <h2>Slot Machine</h2>
-      <div id="slotBalanceDisplay">Balance: <span id="slotBalance">100</span></div>
-      <div id="slotControls">
-        <label for="betAmount">Bet Amount:</label>
-        <input type="number" id="betAmount" value="10" min="1" style="width:60px;">
+      <div style="text-align:center; margin-bottom:10px;">
+        Balance: <span id="globalBalanceSlot">0</span>
       </div>
-      <div id="slotMachine">
+      <div style="text-align:center; margin-bottom:10px;">
+        <label for="betAmount">Bet Amount:</label>
+        <input type="number" id="betAmount" value="10" min="1">
+      </div>
+      <div id="slotMachine" style="display:flex; justify-content:center; margin-bottom:10px;">
         <div class="reel" id="reel1">🍒</div>
         <div class="reel" id="reel2">🍒</div>
         <div class="reel" id="reel3">🍒</div>
       </div>
-      <button id="spinSlotButton">Spin</button>
-      <div id="slotResult"></div>
+      <div style="text-align:center;">
+        <button id="spinSlotButton">Spin</button>
+      </div>
+      <div id="slotResult" style="text-align:center; margin-top:10px;"></div>
     </div>
   </div>
-
   <script>
     /*******************************
-     * Navigation
+     * Global Balance Updates
      *******************************/
-    document.querySelectorAll('nav a').forEach(link => {
+    function updateGlobalBalanceDisplays() {
+      document.getElementById('globalBalancePlinko').innerText = idleData.coins.toFixed(1);
+      document.getElementById('globalBalanceSlot').innerText = idleData.coins.toFixed(1);
+    }
+    /*******************************
+     * Navigation & Dark Mode
+     *******************************/
+    document.querySelectorAll('nav a[data-target]').forEach(link => {
       link.addEventListener('click', function(e) {
         e.preventDefault();
         const target = this.getAttribute('data-target');
-        document.querySelectorAll('.game-section').forEach(section => {
-          section.classList.remove('active');
-        });
+        document.querySelectorAll('.game-section').forEach(section => section.classList.remove('active'));
         document.getElementById(target).classList.add('active');
       });
     });
-
+    document.getElementById('toggleDarkMode').addEventListener('click', function(e) {
+      e.preventDefault();
+      document.body.classList.toggle('dark');
+      localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+    });
+    if(localStorage.getItem('darkMode') === 'true'){
+      document.body.classList.add('dark');
+    }
     /*******************************
-     * Idle Miner Game
+     * Global Currency (Idle Miner Data)
      *******************************/
     let idleData = {
       coins: 0,
@@ -259,24 +315,23 @@
       pickaxeCost: 10,
       minerCost: 50
     };
-
     function loadIdleData() {
-      const saved = localStorage.getItem('idleMinerData');
-      if (saved) idleData = JSON.parse(saved);
+      const saved = localStorage.getItem('idleData');
+      if(saved) idleData = JSON.parse(saved);
       updateIdleDisplay();
     }
     function saveIdleData() {
-      localStorage.setItem('idleMinerData', JSON.stringify(idleData));
+      localStorage.setItem('idleData', JSON.stringify(idleData));
     }
     function updateIdleDisplay() {
-      document.getElementById('idleCoins').innerText = Math.floor(idleData.coins);
+      document.getElementById('idleCoins').innerText = idleData.coins.toFixed(1);
       document.getElementById('idleClickPower').innerText = idleData.clickPower;
       document.getElementById('idleMiners').innerText = idleData.miners;
       document.getElementById('pickaxeCost').innerText = Math.floor(idleData.pickaxeCost);
       document.getElementById('minerCost').innerText = Math.floor(idleData.minerCost);
+      updateGlobalBalanceDisplays();
     }
-
-    // Click mining with a floating coin animation
+    // Idle Miner: Click to mine coins with floating coin animation
     document.getElementById('mineArea').addEventListener('click', function(e) {
       idleData.coins += idleData.clickPower;
       updateIdleDisplay();
@@ -290,9 +345,8 @@
       this.appendChild(coin);
       coin.addEventListener('animationend', () => coin.remove());
     });
-
     document.getElementById('upgradePickaxeButton').addEventListener('click', function() {
-      if (idleData.coins >= idleData.pickaxeCost) {
+      if(idleData.coins >= idleData.pickaxeCost) {
         idleData.coins -= idleData.pickaxeCost;
         idleData.clickPower += 1;
         idleData.pickaxeCost *= 1.5;
@@ -303,7 +357,7 @@
       }
     });
     document.getElementById('hireMinerButton').addEventListener('click', function() {
-      if (idleData.coins >= idleData.minerCost) {
+      if(idleData.coins >= idleData.minerCost) {
         idleData.coins -= idleData.minerCost;
         idleData.miners += 1;
         idleData.minerCost *= 1.7;
@@ -314,41 +368,39 @@
       }
     });
     document.getElementById('resetIdleButton').addEventListener('click', function() {
-      if (confirm("Reset Idle Miner?")) {
+      if(confirm("Reset Idle Miner?")) {
         idleData = { coins: 0, clickPower: 1, miners: 0, pickaxeCost: 10, minerCost: 50 };
         updateIdleDisplay();
         saveIdleData();
       }
     });
+    // Auto-mine every second from hired miners
     setInterval(() => {
-      if (idleData.miners > 0) {
+      if(idleData.miners > 0) {
         idleData.coins += idleData.miners;
         updateIdleDisplay();
         saveIdleData();
       }
     }, 1000);
     loadIdleData();
-
     /*******************************
      * Higher/Lower Game
      *******************************/
-    let hlData = { currentNumber: 0, score: 0 };
+    let hlData = {
+      currentNumber: 0,
+      score: 0,
+      prevNumber: null
+    };
     function startHLGame() {
-      hlData.currentNumber = Math.floor(Math.random() * 100) + 1;
+      hlData.currentNumber = Math.floor(Math.random()*100)+1;
       hlData.score = 0;
-    }
-    function loadHLData() {
-      const saved = localStorage.getItem('hlGameData');
-      if (saved) hlData = JSON.parse(saved);
-      else startHLGame();
+      hlData.prevNumber = null;
       updateHLDisplay();
-    }
-    function saveHLData() {
-      localStorage.setItem('hlGameData', JSON.stringify(hlData));
     }
     function updateHLDisplay() {
       document.getElementById('hlCard').innerText = hlData.currentNumber;
       document.getElementById('hlScore').innerText = hlData.score;
+      document.getElementById('hlPrevDisplay').innerText = "Previous: " + (hlData.prevNumber !== null ? hlData.prevNumber : "N/A");
     }
     function flipHLCard(newNumber) {
       const card = document.getElementById('hlCard');
@@ -359,40 +411,39 @@
       }, 600);
     }
     document.getElementById('higherButton').addEventListener('click', function() {
-      const next = Math.floor(Math.random() * 100) + 1;
-      if (next > hlData.currentNumber) {
+      let next = Math.floor(Math.random()*100)+1;
+      if(next > hlData.currentNumber) {
         hlData.score++;
+        hlData.prevNumber = hlData.currentNumber;
         flipHLCard(next);
         hlData.currentNumber = next;
       } else {
         alert("Wrong! Game Over. Score: " + hlData.score);
         startHLGame();
+        return;
       }
       updateHLDisplay();
-      saveHLData();
     });
     document.getElementById('lowerButton').addEventListener('click', function() {
-      const next = Math.floor(Math.random() * 100) + 1;
-      if (next < hlData.currentNumber) {
+      let next = Math.floor(Math.random()*100)+1;
+      if(next < hlData.currentNumber) {
         hlData.score++;
+        hlData.prevNumber = hlData.currentNumber;
         flipHLCard(next);
         hlData.currentNumber = next;
       } else {
         alert("Wrong! Game Over. Score: " + hlData.score);
         startHLGame();
+        return;
       }
       updateHLDisplay();
-      saveHLData();
     });
     document.getElementById('resetHLButton').addEventListener('click', function() {
-      if (confirm("Reset Higher/Lower?")) {
+      if(confirm("Reset Higher/Lower?")) {
         startHLGame();
-        updateHLDisplay();
-        saveHLData();
       }
     });
-    loadHLData();
-
+    startHLGame();
     /*******************************
      * Plinko Game
      *******************************/
@@ -400,59 +451,33 @@
     const plinkoCtx = plinkoCanvas.getContext('2d');
     const plinkoWidth = plinkoCanvas.width;
     const plinkoHeight = plinkoCanvas.height;
-    let plinkoScore = 0;
-    let plinkoBalls = []; // active balls
+    // 13 bins with fixed multipliers:
+    // [100, 10, 5, 2, 0.2, 0.2, 0.2, 0.2, 0.2, 2, 5, 10, 100]
+    const binCount = 13;
+    const binMultipliers = [100, 10, 5, 2, 0.2, 0.2, 0.2, 0.2, 0.2, 2, 5, 10, 100];
+    const binWidth = plinkoWidth / binCount;
+    // Generate pegs
     const plinkoPegs = [];
     const pegRows = 8;
-    const pegSpacingX = plinkoWidth / 9;
+    const pegSpacingX = plinkoWidth / 10;
     const pegSpacingY = 60;
     const pegRadius = 5;
-    // Generate pegs in offset rows
-    for (let row = 0; row < pegRows; row++) {
-      let offset = (row % 2 === 0) ? pegSpacingX / 2 : 0;
+    for(let row = 0; row < pegRows; row++){
+      let offset = (row % 2 === 0) ? pegSpacingX/2 : 0;
       let numPegs = Math.floor(plinkoWidth / pegSpacingX);
-      for (let i = 0; i < numPegs; i++) {
+      for(let i = 0; i < numPegs; i++){
         plinkoPegs.push({
-          x: offset + i * pegSpacingX,
-          y: 50 + row * pegSpacingY,
+          x: offset + i*pegSpacingX,
+          y: 50 + row*pegSpacingY,
           r: pegRadius
         });
       }
     }
-    // Define bins at bottom (8 bins)
-    const binCount = 8;
-    const binWidth = plinkoWidth / binCount;
-    // For a realistic feel, you can set multipliers manually.
-    // Here we assign random multipliers except for the center bins (indices 3 and 4) which we set to 0.2.
-    const binMultipliers = [];
-    for (let i = 0; i < binCount; i++) {
-      if (i === 3 || i === 4) {
-        binMultipliers.push(0.2);
-      } else {
-        binMultipliers.push((Math.random() * 2 + 1).toFixed(1)); // e.g., 1.0 to 3.0
-      }
-    }
-    function loadPlinkoScore() {
-      const saved = localStorage.getItem('plinkoScore');
-      if (saved) plinkoScore = parseFloat(saved);
-      document.getElementById('plinkoScore').innerText = plinkoScore;
-    }
-    function savePlinkoScore() {
-      localStorage.setItem('plinkoScore', plinkoScore);
-    }
-    // Ball constructor
-    function Ball(x, y) {
-      this.x = x;
-      this.y = y;
-      this.r = 8;
-      this.vx = (Math.random() - 0.5) * 4;
-      this.vy = 0;
-    }
-    // Update physics for Plinko balls
+    let plinkoBalls = [];
     function updatePlinko() {
       plinkoCtx.clearRect(0, 0, plinkoWidth, plinkoHeight);
-      // Draw bins at bottom
-      for (let i = 0; i < binCount; i++) {
+      // Draw bins
+      for(let i = 0; i < binCount; i++){
         plinkoCtx.fillStyle = "#ddd";
         plinkoCtx.fillRect(i * binWidth, plinkoHeight - 30, binWidth, 30);
         plinkoCtx.fillStyle = "#333";
@@ -468,23 +493,29 @@
         plinkoCtx.fill();
       });
       // Update and draw balls
-      for (let b = plinkoBalls.length - 1; b >= 0; b--) {
+      for(let b = plinkoBalls.length - 1; b >= 0; b--){
         const ball = plinkoBalls[b];
-        // Apply gravity (reduced for realistic slow fall)
-        ball.vy += 0.2;
+        ball.vy += 0.3;  // gravity
         ball.x += ball.vx;
         ball.y += ball.vy;
-        // Wall collision
-        if (ball.x < ball.r || ball.x > plinkoWidth - ball.r) {
+        // Dampen horizontal movement near edges
+        if(ball.x < ball.r + 20){
+          ball.vx = Math.abs(ball.vx)*0.5;
+        }
+        if(ball.x > plinkoWidth - ball.r - 20){
+          ball.vx = -Math.abs(ball.vx)*0.5;
+        }
+        // Bounce off walls
+        if(ball.x < ball.r || ball.x > plinkoWidth - ball.r){
           ball.vx *= -1;
         }
-        // Peg collisions (less bounce using 0.2 multiplier)
+        // Peg collisions (reduced bounce)
         plinkoPegs.forEach(peg => {
-          const dx = ball.x - peg.x;
-          const dy = ball.y - peg.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < ball.r + peg.r) {
-            const angle = Math.atan2(dy, dx);
+          let dx = ball.x - peg.x;
+          let dy = ball.y - peg.y;
+          let dist = Math.hypot(dx, dy);
+          if(dist < ball.r + peg.r){
+            let angle = Math.atan2(dy, dx);
             ball.vx = Math.cos(angle) * 0.2;
             ball.vy = Math.sin(angle) * 0.2;
           }
@@ -494,92 +525,100 @@
         plinkoCtx.beginPath();
         plinkoCtx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
         plinkoCtx.fill();
-        // Check if ball reached bottom bins
-        if (ball.y + ball.r > plinkoHeight - 30) {
-          const binIndex = Math.floor(ball.x / binWidth);
-          // Multiply a base score (for example, 10) by the bin's multiplier
-          plinkoScore += 10 * parseFloat(binMultipliers[binIndex]);
-          document.getElementById('plinkoScore').innerText = plinkoScore.toFixed(1);
-          savePlinkoScore();
+        // If ball reached bottom
+        if(ball.y + ball.r > plinkoHeight - 30){
+          let binIndex = Math.floor(ball.x / binWidth);
+          if(binIndex < 0) binIndex = 0;
+          if(binIndex >= binCount) binIndex = binCount - 1;
+          let multiplier = binMultipliers[binIndex];
+          let winnings = ball.bet * multiplier;
+          idleData.coins += winnings;
+          updateIdleDisplay();
+          saveIdleData();
           plinkoBalls.splice(b, 1);
         }
       }
       requestAnimationFrame(updatePlinko);
     }
-    document.getElementById('dropBallButton').addEventListener('click', function() {
-      plinkoBalls.push(new Ball(plinkoWidth/2 + (Math.random()-0.5)*50, 20));
+    document.getElementById('dropBallButton').addEventListener('click', function(){
+      let bet = parseFloat(document.getElementById('plinkoBet').value);
+      if(isNaN(bet) || bet <= 0){
+        alert("Enter a valid bet.");
+        return;
+      }
+      if(idleData.coins < bet){
+        alert("Not enough coins!");
+        return;
+      }
+      idleData.coins -= bet;
+      updateIdleDisplay();
+      saveIdleData();
+      // Create a new ball with low horizontal velocity
+      let ball = {
+        x: plinkoWidth/2 + (Math.random()-0.5)*10,
+        y: 20,
+        r: 8,
+        vx: (Math.random()-0.5)*2,
+        vy: 0,
+        bet: bet
+      };
+      plinkoBalls.push(ball);
     });
-    document.getElementById('resetPlinkoButton').addEventListener('click', function() {
-      if (confirm("Reset Plinko score?")) {
-        plinkoScore = 0;
-        document.getElementById('plinkoScore').innerText = plinkoScore;
-        savePlinkoScore();
+    document.getElementById('resetPlinkoButton').addEventListener('click', function(){
+      if(confirm("Reset Plinko?")){
+        alert("Plinko has been reset.");
       }
     });
-    loadPlinkoScore();
     updatePlinko();
-
     /*******************************
-     * Slot Machine Game (3 Reels)
+     * Slot Machine Game
      *******************************/
-    let slotBalance = 100;
-    function loadSlotBalance() {
-      const saved = localStorage.getItem('slotBalance');
-      if (saved) slotBalance = parseInt(saved);
-      updateSlotBalanceDisplay();
-    }
-    function saveSlotBalance() {
-      localStorage.setItem('slotBalance', slotBalance);
-    }
-    function updateSlotBalanceDisplay() {
-      document.getElementById('slotBalance').innerText = slotBalance;
-    }
-    const slotSymbols = ["🍒", "🍋", "🔔", "⭐", "7️⃣", "🍀"];
-    // Utility function to spin one reel; returns a promise that resolves with the final symbol.
+    const slotSymbols = ["🍒","🍋","🔔","⭐","7️⃣","🍀"];
     function spinReel(reelElement, duration) {
       return new Promise(resolve => {
+        reelElement.classList.add("spinning");
         let interval = setInterval(() => {
-          reelElement.innerText = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+          reelElement.innerText = slotSymbols[Math.floor(Math.random()*slotSymbols.length)];
         }, 100);
         setTimeout(() => {
           clearInterval(interval);
-          const finalSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+          reelElement.classList.remove("spinning");
+          let finalSymbol = slotSymbols[Math.floor(Math.random()*slotSymbols.length)];
           reelElement.innerText = finalSymbol;
           resolve(finalSymbol);
         }, duration);
       });
     }
-    document.getElementById('spinSlotButton').addEventListener('click', async function() {
-      const betInput = document.getElementById('betAmount');
-      let bet = parseInt(betInput.value);
-      if (isNaN(bet) || bet <= 0) { alert("Please enter a valid bet amount."); return; }
-      if (bet > slotBalance) { alert("Not enough balance."); return; }
-      // Deduct bet and update balance display
-      slotBalance -= bet;
-      updateSlotBalanceDisplay();
-      saveSlotBalance();
-      this.disabled = true;
+    document.getElementById('spinSlotButton').addEventListener('click', async function(){
+      let bet = parseFloat(document.getElementById('betAmount').value);
+      if(isNaN(bet) || bet <= 0){
+        alert("Enter a valid bet.");
+        return;
+      }
+      if(idleData.coins < bet){
+        alert("Not enough coins!");
+        return;
+      }
+      idleData.coins -= bet;
+      updateIdleDisplay();
+      saveIdleData();
       document.getElementById('slotResult').innerText = "";
-      // Spin reels sequentially
       const reel1 = document.getElementById('reel1');
       const reel2 = document.getElementById('reel2');
       const reel3 = document.getElementById('reel3');
-      const symbol1 = await spinReel(reel1, 1000);
-      const symbol2 = await spinReel(reel2, 1500);
+      const symbol1 = await spinReel(reel1, 1200);
+      const symbol2 = await spinReel(reel2, 1600);
       const symbol3 = await spinReel(reel3, 2000);
-      // Simple win condition: all three symbols match
-      if (symbol1 === symbol2 && symbol2 === symbol3) {
-        const winnings = bet * 5; // Payout multiplier
-        slotBalance += winnings;
+      if(symbol1 === symbol2 && symbol2 === symbol3) {
+        let winnings = bet * 5;
+        idleData.coins += winnings;
         document.getElementById('slotResult').innerText = "Jackpot! You win " + winnings + " coins!";
       } else {
         document.getElementById('slotResult').innerText = "Sorry, you lose.";
       }
-      updateSlotBalanceDisplay();
-      saveSlotBalance();
-      this.disabled = false;
+      updateIdleDisplay();
+      saveIdleData();
     });
-    loadSlotBalance();
   </script>
 </body>
 </html>
