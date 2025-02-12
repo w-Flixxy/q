@@ -126,7 +126,6 @@
       100% { opacity: 0; transform: translateY(-50px); }
     }
     /* Higher/Lower Styles */
-    /* We position the current card centered in a container with relative positioning */
     #hlCardsContainer {
       position: relative;
       width: 150px; /* width of the current card */
@@ -505,6 +504,8 @@
       for (let b = plinkoBalls.length - 1; b >= 0; b--) {
         const ball = plinkoBalls[b];
         ball.vy += 0.6;  // increased gravity for faster falling
+        // Add small random horizontal noise to make outcomes less rigged
+        ball.vx += (Math.random() - 0.5) * 0.1;
         ball.x += ball.vx;
         ball.y += ball.vy;
         // Dampen horizontal movement near edges
@@ -518,43 +519,49 @@
         if (ball.x < ball.r || ball.x > plinkoWidth - ball.r) {
           ball.vx *= -1;
         }
-        // Peg collisions with correction to avoid sticking
+        // Peg collisions using elastic reflection to avoid sticking
         plinkoPegs.forEach(peg => {
           let dx = ball.x - peg.x;
           let dy = ball.y - peg.y;
-          let dist = Math.hypot(dx, dy);
-          if (dist < ball.r + peg.r) {
-            let angle = Math.atan2(dy, dx);
-            let overlap = (ball.r + peg.r) - dist;
-            ball.x += Math.cos(angle) * overlap;
-            ball.y += Math.sin(angle) * overlap;
-            ball.vx = Math.cos(angle) * 0.2;
-            ball.vy = Math.sin(angle) * 0.2;
+          let dist = Math.sqrt(dx * dx + dy * dy);
+          let minDist = ball.r + peg.r;
+          if (dist < minDist && dist > 0) {
+            let nx = dx / dist;
+            let ny = dy / dist;
+            let overlap = minDist - dist;
+            ball.x += nx * overlap;
+            ball.y += ny * overlap;
+            // Reflect velocity
+            let dot = ball.vx * nx + ball.vy * ny;
+            ball.vx = ball.vx - 2 * dot * nx;
+            ball.vy = ball.vy - 2 * dot * ny;
+            // Add extra random impulse to help dislodge the ball
+            ball.vx += (Math.random() - 0.5) * 0.3;
+            ball.vy += (Math.random() - 0.5) * 0.3;
           }
         });
-      }
-      // Ball-to-ball collisions
-      for (let i = 0; i < plinkoBalls.length; i++) {
-        for (let j = i + 1; j < plinkoBalls.length; j++) {
-          let ballA = plinkoBalls[i];
-          let ballB = plinkoBalls[j];
-          let dx = ballB.x - ballA.x;
-          let dy = ballB.y - ballA.y;
-          let dist = Math.sqrt(dx*dx + dy*dy);
-          let minDist = ballA.r + ballB.r;
-          if (dist < minDist) {
-            let overlap = (minDist - dist) / 2;
-            let angle = Math.atan2(dy, dx);
-            ballA.x -= Math.cos(angle) * overlap;
-            ballA.y -= Math.sin(angle) * overlap;
-            ballB.x += Math.cos(angle) * overlap;
-            ballB.y += Math.sin(angle) * overlap;
+        // Ball-to-ball collisions
+        for (let i = 0; i < plinkoBalls.length; i++) {
+          for (let j = i + 1; j < plinkoBalls.length; j++) {
+            let ballA = plinkoBalls[i];
+            let ballB = plinkoBalls[j];
+            let dx = ballB.x - ballA.x;
+            let dy = ballB.y - ballA.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            let minDist = ballA.r + ballB.r;
+            if (dist < minDist && dist > 0) {
+              let overlap = (minDist - dist) / 2;
+              let angle = Math.atan2(dy, dx);
+              let nx = Math.cos(angle);
+              let ny = Math.sin(angle);
+              ballA.x -= nx * overlap;
+              ballA.y -= ny * overlap;
+              ballB.x += nx * overlap;
+              ballB.y += ny * overlap;
+            }
           }
         }
-      }
-      // Draw balls
-      for (let b = plinkoBalls.length - 1; b >= 0; b--) {
-        const ball = plinkoBalls[b];
+        // Draw ball
         plinkoCtx.fillStyle = "#e67e22";
         plinkoCtx.beginPath();
         plinkoCtx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
@@ -587,7 +594,6 @@
       idleData.coins -= bet;
       updateIdleDisplay();
       saveIdleData();
-      // Create a new ball with low horizontal velocity
       let ball = {
         x: plinkoWidth / 2 + (Math.random() - 0.5) * 10,
         y: 20,
