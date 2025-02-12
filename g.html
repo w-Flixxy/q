@@ -83,7 +83,7 @@
       pointer-events: none;
       user-select: none;
     }
-    /* Coin float animation */
+    /* Floating coin animation */
     .coin {
       position: absolute;
       font-size: 1.5em;
@@ -112,7 +112,7 @@
       font-size: 3em;
       perspective: 1000px;
     }
-    /* We'll perform a simple flip by rotating the inner text */
+    /* Simple flip animation */
     #hlCard.flip {
       animation: flipCard 0.6s forwards;
     }
@@ -135,16 +135,28 @@
     }
     #plinkoScoreDisplay { margin: 10px; font-size: 1.2em; }
 
-    /* Roulette Styles */
-    #rouletteSection { text-align: center; }
-    #rouletteCanvas {
-      border: 2px solid #007acc;
-      border-radius: 50%;
-      background: #fafafa;
-      display: block;
-      margin: 0 auto 10px;
+    /* Slot Machine Styles */
+    #slotMachineSection { text-align: center; }
+    #slotMachine {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
     }
-    #rouletteResult { font-size: 1.5em; margin-top: 10px; }
+    .reel {
+      width: 80px;
+      height: 80px;
+      border: 2px solid #007acc;
+      border-radius: 10px;
+      margin: 0 10px;
+      font-size: 3em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fafafa;
+    }
+    #slotBalanceDisplay { margin: 10px 0; font-size: 1.2em; }
+    #slotResult { font-size: 1.4em; margin-top: 10px; }
+    #slotControls { margin: 10px 0; }
   </style>
 </head>
 <body>
@@ -156,13 +168,13 @@
     <a href="#" data-target="idleMinerSection">Idle Miner</a>
     <a href="#" data-target="higherLowerSection">Higher/Lower</a>
     <a href="#" data-target="plinkoSection">Plinko</a>
-    <a href="#" data-target="rouletteSection">Roulette</a>
+    <a href="#" data-target="slotMachineSection">Slot Machine</a>
   </nav>
   <div class="container">
     <!-- About Section -->
     <div id="aboutSection" class="game-section active">
       <h2>Welcome to the Funny Games Hub!</h2>
-      <p>Enjoy our visually enhanced games. Tap on the miner to mine coins, flip the card to guess higher or lower, drop a ball in Plinko and watch it bounce, or try your luck spinning the Roulette wheel.</p>
+      <p>Enjoy our visually enhanced games. Tap the miner to mine coins, flip the card to guess higher or lower, drop a ball in Plinko and watch it bounce realistically, or try your luck on the slot machine with three spinning reels!</p>
     </div>
 
     <!-- Idle Miner Game Section -->
@@ -204,12 +216,21 @@
       <button id="resetPlinkoButton" style="background:#cc0000;">Reset</button>
     </div>
 
-    <!-- Roulette Game Section -->
-    <div id="rouletteSection" class="game-section">
-      <h2>Roulette</h2>
-      <canvas id="rouletteCanvas" width="400" height="400"></canvas>
-      <button id="spinRouletteButton">Spin</button>
-      <div id="rouletteResult">Result: ?</div>
+    <!-- Slot Machine Game Section -->
+    <div id="slotMachineSection" class="game-section">
+      <h2>Slot Machine</h2>
+      <div id="slotBalanceDisplay">Balance: <span id="slotBalance">100</span></div>
+      <div id="slotControls">
+        <label for="betAmount">Bet Amount:</label>
+        <input type="number" id="betAmount" value="10" min="1" style="width:60px;">
+      </div>
+      <div id="slotMachine">
+        <div class="reel" id="reel1">🍒</div>
+        <div class="reel" id="reel2">🍒</div>
+        <div class="reel" id="reel3">🍒</div>
+      </div>
+      <button id="spinSlotButton">Spin</button>
+      <div id="slotResult"></div>
     </div>
   </div>
 
@@ -255,21 +276,18 @@
       document.getElementById('minerCost').innerText = Math.floor(idleData.minerCost);
     }
 
-    // When user clicks the mine area, add coins and spawn an animated coin
+    // Click mining with a floating coin animation
     document.getElementById('mineArea').addEventListener('click', function(e) {
       idleData.coins += idleData.clickPower;
       updateIdleDisplay();
       saveIdleData();
-      // Create a coin element at the click position
       const coin = document.createElement('div');
       coin.className = 'coin';
       coin.innerText = '💰';
-      // Get click coordinates relative to mineArea
       const rect = this.getBoundingClientRect();
       coin.style.left = (e.clientX - rect.left) + 'px';
       coin.style.top = (e.clientY - rect.top) + 'px';
       this.appendChild(coin);
-      // Remove coin after animation
       coin.addEventListener('animationend', () => coin.remove());
     });
 
@@ -302,7 +320,6 @@
         saveIdleData();
       }
     });
-    // Auto-mining every second
     setInterval(() => {
       if (idleData.miners > 0) {
         idleData.coins += idleData.miners;
@@ -384,7 +401,7 @@
     const plinkoWidth = plinkoCanvas.width;
     const plinkoHeight = plinkoCanvas.height;
     let plinkoScore = 0;
-    let plinkoBalls = []; // array of active balls
+    let plinkoBalls = []; // active balls
     const plinkoPegs = [];
     const pegRows = 8;
     const pegSpacingX = plinkoWidth / 9;
@@ -402,16 +419,22 @@
         });
       }
     }
-    // Define bins at bottom (for simplicity, 8 bins)
+    // Define bins at bottom (8 bins)
     const binCount = 8;
     const binWidth = plinkoWidth / binCount;
-    const binScores = []; // assign random scores between 1 and 10 to each bin
+    // For a realistic feel, you can set multipliers manually.
+    // Here we assign random multipliers except for the center bins (indices 3 and 4) which we set to 0.2.
+    const binMultipliers = [];
     for (let i = 0; i < binCount; i++) {
-      binScores.push(Math.floor(Math.random() * 10) + 1);
+      if (i === 3 || i === 4) {
+        binMultipliers.push(0.2);
+      } else {
+        binMultipliers.push((Math.random() * 2 + 1).toFixed(1)); // e.g., 1.0 to 3.0
+      }
     }
     function loadPlinkoScore() {
       const saved = localStorage.getItem('plinkoScore');
-      if (saved) plinkoScore = parseInt(saved);
+      if (saved) plinkoScore = parseFloat(saved);
       document.getElementById('plinkoScore').innerText = plinkoScore;
     }
     function savePlinkoScore() {
@@ -425,7 +448,7 @@
       this.vx = (Math.random() - 0.5) * 4;
       this.vy = 0;
     }
-    // Simple physics update for balls
+    // Update physics for Plinko balls
     function updatePlinko() {
       plinkoCtx.clearRect(0, 0, plinkoWidth, plinkoHeight);
       // Draw bins at bottom
@@ -435,7 +458,7 @@
         plinkoCtx.fillStyle = "#333";
         plinkoCtx.font = "14px sans-serif";
         plinkoCtx.textAlign = "center";
-        plinkoCtx.fillText(binScores[i], i * binWidth + binWidth/2, plinkoHeight - 10);
+        plinkoCtx.fillText(binMultipliers[i] + "x", i * binWidth + binWidth/2, plinkoHeight - 10);
       }
       // Draw pegs
       plinkoCtx.fillStyle = "#007acc";
@@ -447,24 +470,23 @@
       // Update and draw balls
       for (let b = plinkoBalls.length - 1; b >= 0; b--) {
         const ball = plinkoBalls[b];
-        // Apply gravity
-        ball.vy += 0.3;
+        // Apply gravity (reduced for realistic slow fall)
+        ball.vy += 0.2;
         ball.x += ball.vx;
         ball.y += ball.vy;
         // Wall collision
         if (ball.x < ball.r || ball.x > plinkoWidth - ball.r) {
           ball.vx *= -1;
         }
-        // Peg collisions
+        // Peg collisions (less bounce using 0.2 multiplier)
         plinkoPegs.forEach(peg => {
           const dx = ball.x - peg.x;
           const dy = ball.y - peg.y;
           const dist = Math.hypot(dx, dy);
           if (dist < ball.r + peg.r) {
-            // Simple collision: push ball away
             const angle = Math.atan2(dy, dx);
-            ball.vx = Math.cos(angle) * 2;
-            ball.vy = Math.sin(angle) * 2;
+            ball.vx = Math.cos(angle) * 0.2;
+            ball.vy = Math.sin(angle) * 0.2;
           }
         });
         // Draw ball
@@ -472,21 +494,19 @@
         plinkoCtx.beginPath();
         plinkoCtx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
         plinkoCtx.fill();
-        // Check if ball reached bottom (bins)
+        // Check if ball reached bottom bins
         if (ball.y + ball.r > plinkoHeight - 30) {
-          // Determine bin index
           const binIndex = Math.floor(ball.x / binWidth);
-          plinkoScore += binScores[binIndex];
-          document.getElementById('plinkoScore').innerText = plinkoScore;
+          // Multiply a base score (for example, 10) by the bin's multiplier
+          plinkoScore += 10 * parseFloat(binMultipliers[binIndex]);
+          document.getElementById('plinkoScore').innerText = plinkoScore.toFixed(1);
           savePlinkoScore();
-          // Remove ball
           plinkoBalls.splice(b, 1);
         }
       }
       requestAnimationFrame(updatePlinko);
     }
     document.getElementById('dropBallButton').addEventListener('click', function() {
-      // Drop ball from top center (or random near center)
       plinkoBalls.push(new Ball(plinkoWidth/2 + (Math.random()-0.5)*50, 20));
     });
     document.getElementById('resetPlinkoButton').addEventListener('click', function() {
@@ -500,85 +520,66 @@
     updatePlinko();
 
     /*******************************
-     * Roulette Game
+     * Slot Machine Game (3 Reels)
      *******************************/
-    const rouletteCanvas = document.getElementById('rouletteCanvas');
-    const rouletteCtx = rouletteCanvas.getContext('2d');
-    const rouletteWidth = rouletteCanvas.width;
-    const rouletteHeight = rouletteCanvas.height;
-    const segments = 12;
-    let rouletteAngle = 0;
-    let rouletteAngularVelocity = 0;
-    let rouletteSpinning = false;
-    // Prepare segments with numbers and colors (alternating)
-    const rouletteSegments = [];
-    for (let i = 0; i < segments; i++) {
-      rouletteSegments.push({
-        number: i + 1,
-        color: (i % 2 === 0) ? "#e74c3c" : "#2ecc71"
+    let slotBalance = 100;
+    function loadSlotBalance() {
+      const saved = localStorage.getItem('slotBalance');
+      if (saved) slotBalance = parseInt(saved);
+      updateSlotBalanceDisplay();
+    }
+    function saveSlotBalance() {
+      localStorage.setItem('slotBalance', slotBalance);
+    }
+    function updateSlotBalanceDisplay() {
+      document.getElementById('slotBalance').innerText = slotBalance;
+    }
+    const slotSymbols = ["🍒", "🍋", "🔔", "⭐", "7️⃣", "🍀"];
+    // Utility function to spin one reel; returns a promise that resolves with the final symbol.
+    function spinReel(reelElement, duration) {
+      return new Promise(resolve => {
+        let interval = setInterval(() => {
+          reelElement.innerText = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+        }, 100);
+        setTimeout(() => {
+          clearInterval(interval);
+          const finalSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+          reelElement.innerText = finalSymbol;
+          resolve(finalSymbol);
+        }, duration);
       });
     }
-    function drawRoulette() {
-      rouletteCtx.clearRect(0, 0, rouletteWidth, rouletteHeight);
-      const centerX = rouletteWidth / 2;
-      const centerY = rouletteHeight / 2;
-      const radius = Math.min(centerX, centerY) - 20;
-      const segmentAngle = (Math.PI * 2) / segments;
-      // Draw each segment
-      for (let i = 0; i < segments; i++) {
-        const startAngle = rouletteAngle + i * segmentAngle;
-        rouletteCtx.beginPath();
-        rouletteCtx.moveTo(centerX, centerY);
-        rouletteCtx.arc(centerX, centerY, radius, startAngle, startAngle + segmentAngle);
-        rouletteCtx.closePath();
-        rouletteCtx.fillStyle = rouletteSegments[i].color;
-        rouletteCtx.fill();
-        rouletteCtx.strokeStyle = "#fff";
-        rouletteCtx.stroke();
-        // Draw number
-        rouletteCtx.save();
-        rouletteCtx.translate(centerX, centerY);
-        rouletteCtx.rotate(startAngle + segmentAngle/2);
-        rouletteCtx.textAlign = "right";
-        rouletteCtx.fillStyle = "#fff";
-        rouletteCtx.font = "bold 18px sans-serif";
-        rouletteCtx.fillText(rouletteSegments[i].number, radius - 10, 8);
-        rouletteCtx.restore();
+    document.getElementById('spinSlotButton').addEventListener('click', async function() {
+      const betInput = document.getElementById('betAmount');
+      let bet = parseInt(betInput.value);
+      if (isNaN(bet) || bet <= 0) { alert("Please enter a valid bet amount."); return; }
+      if (bet > slotBalance) { alert("Not enough balance."); return; }
+      // Deduct bet and update balance display
+      slotBalance -= bet;
+      updateSlotBalanceDisplay();
+      saveSlotBalance();
+      this.disabled = true;
+      document.getElementById('slotResult').innerText = "";
+      // Spin reels sequentially
+      const reel1 = document.getElementById('reel1');
+      const reel2 = document.getElementById('reel2');
+      const reel3 = document.getElementById('reel3');
+      const symbol1 = await spinReel(reel1, 1000);
+      const symbol2 = await spinReel(reel2, 1500);
+      const symbol3 = await spinReel(reel3, 2000);
+      // Simple win condition: all three symbols match
+      if (symbol1 === symbol2 && symbol2 === symbol3) {
+        const winnings = bet * 5; // Payout multiplier
+        slotBalance += winnings;
+        document.getElementById('slotResult').innerText = "Jackpot! You win " + winnings + " coins!";
+      } else {
+        document.getElementById('slotResult').innerText = "Sorry, you lose.";
       }
-      // Draw pointer at top
-      rouletteCtx.fillStyle = "#333";
-      rouletteCtx.beginPath();
-      rouletteCtx.moveTo(centerX, 10);
-      rouletteCtx.lineTo(centerX - 10, 30);
-      rouletteCtx.lineTo(centerX + 10, 30);
-      rouletteCtx.closePath();
-      rouletteCtx.fill();
-    }
-    function updateRoulette() {
-      if (rouletteSpinning) {
-        rouletteAngle += rouletteAngularVelocity;
-        rouletteAngularVelocity *= 0.985; // friction
-        if (rouletteAngularVelocity < 0.002) {
-          rouletteAngularVelocity = 0;
-          rouletteSpinning = false;
-          // Determine winning segment
-          let normalized = rouletteAngle % (Math.PI * 2);
-          if (normalized < 0) normalized += Math.PI * 2;
-          const seg = Math.floor((Math.PI * 2 - normalized) / ((Math.PI * 2)/segments)) % segments;
-          document.getElementById('rouletteResult').innerText = "Result: " + rouletteSegments[seg].number;
-        }
-      }
-      drawRoulette();
-      requestAnimationFrame(updateRoulette);
-    }
-    document.getElementById('spinRouletteButton').addEventListener('click', function() {
-      if (!rouletteSpinning) {
-        rouletteAngularVelocity = Math.random() * 0.3 + 0.3;
-        rouletteSpinning = true;
-        document.getElementById('rouletteResult').innerText = "Spinning...";
-      }
+      updateSlotBalanceDisplay();
+      saveSlotBalance();
+      this.disabled = false;
     });
-    updateRoulette();
+    loadSlotBalance();
   </script>
 </body>
 </html>
