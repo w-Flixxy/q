@@ -128,9 +128,9 @@
     /* Higher/Lower-stijlen */
     #hlCardsContainer {
       position: relative;
-      width: 150px; /* breedte van de huidige kaart */
+      width: 150px;
       margin: 0 auto 10px auto;
-      height: 200px; /* zelfde hoogte als huidige kaart */
+      height: 200px;
     }
     #hlCurrentCard {
       width: 150px;
@@ -166,8 +166,8 @@
       justify-content: center;
       font-size: 2em;
       position: absolute;
-      left: -110px;  /* links van de huidige kaart */
-      top: 35px;     /* verticaal gecentreerd t.o.v. de huidige kaart */
+      left: -110px;
+      top: 35px;
     }
     #hlButtons {
       text-align: center;
@@ -341,7 +341,7 @@
       document.getElementById('minerCost').innerText = Math.floor(idleData.minerCost);
       updateGlobalBalanceDisplays();
     }
-    // Idle Miner: klik op het mijngebied om coins te verdienen
+    // Idle Miner: klik om coins te verdienen
     document.getElementById('mineArea').addEventListener('click', function(e) {
       idleData.coins += idleData.clickPower;
       updateIdleDisplay();
@@ -503,9 +503,10 @@
       // Update en teken ballen
       for (let b = plinkoBalls.length - 1; b >= 0; b--) {
         const ball = plinkoBalls[b];
-        ball.vy += 0.6;  // zwaartekracht
-        // Voeg heel subtiele horizontale ruis toe (optioneel, erg laag)
-        ball.vx += (Math.random() - 0.5) * 0.02;
+        // Gebruik een lagere zwaartekracht zodat de bal langzamer valt
+        ball.vy += 0.3;
+        // Verhoog de horizontale ruis zodat de bal meer van het centrum afwijkt
+        ball.vx += (Math.random() - 0.5) * 0.1;
         ball.x += ball.vx;
         ball.y += ball.vy;
         // Rem horizontale snelheid bij randen
@@ -519,7 +520,7 @@
         if (ball.x < ball.r || ball.x > plinkoWidth - ball.r) {
           ball.vx *= -1;
         }
-        // Botsingen met stokken (pegs) – minder elastisch en alleen lichte zijwaartse duw
+        // Botsingen met stokken (pegs) – minder elastisch en alleen een lichte zijwaartse impuls
         plinkoPegs.forEach(peg => {
           let dx = ball.x - peg.x;
           let dy = ball.y - peg.y;
@@ -532,13 +533,13 @@
             // Verplaats de bal net buiten de peg
             ball.x += nx * overlap;
             ball.y += ny * overlap;
-            // Geef een kleine zijwaartse impuls, maar behoud de neerwaartse snelheid grotendeels
-            ball.vx += nx * 0.03;
-            // Optioneel: lichte demping op de verticale snelheid (niet te sterk)
-            ball.vy *= 0.98;
+            // Geef een iets sterkere horizontale impuls
+            ball.vx += nx * 0.1;
+            // Behoud de verticale snelheid grotendeels
+            ball.vy *= 0.99;
           }
         });
-        // (Optioneel) Bal-tot-bal botsingen kunnen eruit worden gelaten voor eenvoud; hier laten we ze lichtjes gebeuren
+        // (Optioneel) Bal-tot-bal botsingen (lichtjes)
         for (let i = 0; i < plinkoBalls.length; i++) {
           for (let j = i + 1; j < plinkoBalls.length; j++) {
             let ballA = plinkoBalls[i];
@@ -592,11 +593,12 @@
       idleData.coins -= bet;
       updateIdleDisplay();
       saveIdleData();
+      // Pas de initiële horizontale snelheid aan zodat de bal niet te gecentreerd begint
       let ball = {
-        x: plinkoWidth / 2 + (Math.random() - 0.5) * 10,
+        x: plinkoWidth / 2 + (Math.random() - 0.5) * 20,
         y: 20,
         r: 8,
-        vx: (Math.random() - 0.5) * 2,
+        vx: (Math.random() - 0.5) * 3,
         vy: 0,
         bet: bet
       };
