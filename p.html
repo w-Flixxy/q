@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Plinko Game</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 0;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+    #gameCanvas {
+      background: #fff;
+      border: 2px solid #000;
+      display: block;
+      margin: 20px auto;
+    }
+    #controls {
+      margin-bottom: 20px;
+    }
+    button {
+      font-size: 16px;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <h1>Plinko Game</h1>
+  <div id="status">
+    <p id="pointsDisplay">Punten: 0</p>
+    <p id="multiplierDisplay">Multiplier: 1x</p>
+    <p id="upgradeCostDisplay">Volgende upgrade kost: 100 punten</p>
+  </div>
+  <canvas id="gameCanvas" width="600" height="800"></canvas>
+  <div id="controls">
+    <button id="dropButton">Laat de bal vallen</button>
+    <button id="upgradeButton">Koop multiplier upgrade</button>
+  </div>
+
+  <script>
+    // Haal referenties op
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const dropButton = document.getElementById("dropButton");
+    const upgradeButton = document.getElementById("upgradeButton");
+    const pointsDisplay = document.getElementById("pointsDisplay");
+    const multiplierDisplay = document.getElementById("multiplierDisplay");
+    const upgradeCostDisplay = document.getElementById("upgradeCostDisplay");
+
+    // Spelparameters
+    const numRows = 10;      // aantal rijen waarlangs de bal valt
+    const numBins = 11;      // aantal bins onderaan (indices 0 t/m 10)
+    const pegRadius = 5;     // straal van de getekende “pegs”
+    const ballRadius = 10;   // straal van de bal
+
+    // Voor consistente berekeningen van posities:
+    const pegSpacingY = canvas.height / (numRows + 2);          // verticale afstand
+    const binSpacingX = canvas.width / (numBins + 1);             // horizontale afstand
+
+    // Basisbeloningen per bin (symmetrisch, hoogste beloning in het midden)
+    const baseRewards = [1, 2, 5, 10, 20, 50, 20, 10, 5, 2, 1];
+
+    // Spelstatus (wordt opgeslagen via localStorage)
+    let punten = 0;
+    let multiplierLevel = 1;  // Dit bepaalt de winstvermenigvuldiger (1x, 2x, …)
+    let isAnimating = false;  // Om dubbele clicks tijdens animatie te voorkomen
+
+    // Laad spelstatus uit localStorage (indien aanwezig)
+    function loadGame() {
+      const savedState = localStorage.getItem("plinkoGame");
+      if (savedState) {
+        try {
+          const state = JSON.parse(savedState);
+          punten = state.punten || 0;
+          multiplierLevel = state.multiplierLevel || 1;
+        } catch (e) {
+          console.error("Fout bij laden game state:", e);
+        }
+      }
+      updateStatusDisplay();
+    }
+
+    // Sla spelstatus op in localStorage
+    function saveGame() {
+      const state = {
+        punten: punten,
+        multiplierLevel: multiplierLevel
+      };
+      localStorage.setItem("plinkoGame", JSON.stringify(state));
+    }
+
+    // Werk de tekstvelden bij
+    function updateStatusDisplay() {
+      pointsDisplay.textContent = "Punten: " + punten;
+      multiplierDisplay.textContent = "Multiplier: " + multiplierLevel + "x";
+      let upgradeCost = multiplierLevel * 100;
+      upgradeCostDisplay.textContent = "Volgende upgrade kost: " + upgradeCost + " punten";
+      // Upgradebutton alleen actief als je genoeg punten hebt
+      upgradeButton.disabled = (punten < upgradeCost);
+    }
+
+    // Simuleer een bal die valt
+    function dropBall() {
+      if (isAnimating) return;
+      isAnimating = true;
+      dropButton.disabled = true;
+      upgradeButton.disabled = true;
+
+      // Simuleer de baan: begin in de middelste bin (index 5)
+      let path = [];
+      let currentBin = Math.floor(numBins / 2); // 11 bins => midden is index 5
+      path.push(currentBin);
+      // Voor elke rij: beweeg willekeurig links (-1) of rechts (+1)
+      for (let i = 0; i < numRows; i++) {
+        let move;
+        if (currentBin === 0) {
+          move = 1;
+        } else if (currentBin === numBins - 1) {
+          move = -1;
+        } else {
+          move = Math.random() < 0.5 ? -1 : 1;
+        }
+        currentBin += move;
+        path.push(currentBin);
+      }
+      // De uiteindelijke bin bepaalt de basisbeloning
+      let finalBin = path[path.length - 1];
+      let baseReward = baseRewards[finalBin];
+      let winAmount = baseReward * multiplierLevel;
+
+      // Start de animatie waarin de bal langs de berekende weg beweegt
+      animateBallPath(path, winAmount);
+    }
+
+    // Animeer de bal langs de berekende weg
+    function animateBallPath(path, winAmount) {
+      let frame = 0;
+      const framesPerSegment = 30; // aantal frames per “segment” (tussen twee rijen)
+      const totalSegments = path.length - 1;
+
+      function animate() {
+        // Maak canvas schoon en teken de achtergrond (het board)
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBoard();
+
+        // Bepaal in welk segment we zitten
+        let segment = Math.floor(frame / framesPerSegment);
+        let progress = (frame % framesPerSegment) / framesPerSegment;
+
+        // Zorg dat bij het laatste segment progress = 1 is
+        if (segment >= totalSegments) {
+          segment = totalSegments - 1;
+          progress = 1;
+        }
+
+        // Start- en eindpositie (in de horizontale richting) van dit segment
+        let startBin = path[segment];
+        let endBin = path[segment + 1];
+        let startX = (startBin + 1) * binSpacingX;
+        let startY = (segment + 1) * pegSpacingY;
+        let endX = (endBin + 1) * binSpacingX;
+        let endY = (segment + 2) * pegSpacingY;
+
+        // Lineaire interpolatie van positie
+        let ballX = startX + (endX - startX) * progress;
+        let ballY = startY + (endY - startY) * progress;
+
+        // Teken de bal
+        ctx.beginPath();
+        ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+        ctx.fillStyle = "#FF0000";
+        ctx.fill();
+        ctx.closePath();
+
+        frame++;
+        if (frame < totalSegments * framesPerSegment) {
+          requestAnimationFrame(animate);
+        } else {
+          // Animatie afgerond: update punten en meld resultaat
+          punten += winAmount;
+          setTimeout(function() {
+            alert("Je hebt " + winAmount + " punten gewonnen!");
+            isAnimating = false;
+            dropButton.disabled = false;
+            updateStatusDisplay();
+            saveGame();
+          }, 100);
+        }
+      }
+      animate();
+    }
+
+    // Teken het plinko‑bord: pegs en bins
+    function drawBoard() {
+      // Eerst de pegs
+      for (let row = 0; row < numRows; row++) {
+        // Voor afwisseling: in even rijen geen offset, in oneven rijen een kleine offset
+        let offset = (row % 2) * (binSpacingX / 2);
+        // Bepaal het aantal pegs in deze rij
+        // Voor een nette opmaak kun je het aantal pegs in oneven rijen één minder maken
+        let pegsInRow = row % 2 === 0 ? numBins : numBins - 1;
+        let y = (row + 1) * pegSpacingY;
+        for (let col = 0; col < pegsInRow; col++) {
+          let x = offset + (col + 1) * binSpacingX;
+          ctx.beginPath();
+          ctx.arc(x, y, pegRadius, 0, Math.PI * 2);
+          ctx.fillStyle = "#000";
+          ctx.fill();
+          ctx.closePath();
+        }
+      }
+
+      // Teken de bins onderaan
+      let binTop = (numRows + 1) * pegSpacingY;
+      for (let i = 0; i < numBins; i++) {
+        let binCenter = (i + 1) * binSpacingX;
+        let x = binCenter - binSpacingX / 2;
+        let y = binTop;
+        ctx.beginPath();
+        ctx.rect(x, y, binSpacingX, canvas.height - y);
+        ctx.strokeStyle = "#000";
+        ctx.stroke();
+        ctx.closePath();
+
+        // Teken de basisbeloning in het midden van de bin
+        ctx.fillStyle = "#000";
+        ctx.font = "16px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(baseRewards[i], binCenter, y + 20);
+      }
+    }
+
+    // Verhoog de multiplier als er genoeg punten zijn
+    function upgradeMultiplier() {
+      let upgradeCost = multiplierLevel * 100;
+      if (punten >= upgradeCost) {
+        punten -= upgradeCost;
+        multiplierLevel++;
+        updateStatusDisplay();
+        saveGame();
+      }
+    }
+
+    // Eventlisteners voor de knoppen
+    dropButton.addEventListener("click", dropBall);
+    upgradeButton.addEventListener("click", upgradeMultiplier);
+
+    // Bij het laden: teken het board en laad opgeslagen spelstatus
+    drawBoard();
+    loadGame();
+  </script>
+</body>
+</html>
