@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Funny Games Hub</title>
+  <style>
+    /* Basic reset */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      color: #333;
+      line-height: 1.6;
+    }
+    header {
+      background: #007acc;
+      color: #fff;
+      padding: 1em 0;
+      text-align: center;
+    }
+    nav {
+      background: #005f99;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    nav a {
+      color: #fff;
+      text-decoration: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 5px;
+      background: #007acc;
+      transition: background 0.3s;
+    }
+    nav a:hover {
+      background: #005f99;
+    }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .game-section {
+      display: none;
+    }
+    .game-section.active {
+      display: block;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px 5px 5px 0;
+      border: none;
+      border-radius: 5px;
+      background: #007acc;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #005f99;
+    }
+    /* Make sure it works well on tablets */
+    @media (max-width: 768px) {
+      .container {
+        margin: 10px;
+        padding: 15px;
+      }
+      nav {
+        flex-direction: column;
+      }
+    }
+    /* Simple styling for messages */
+    #hlMessage {
+      margin: 10px 0;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Funny Games Hub</h1>
+  </header>
+  <nav>
+    <a href="#" data-target="aboutSection">About</a>
+    <a href="#" data-target="idleMinerSection">Idle Miner</a>
+    <a href="#" data-target="higherLowerSection">Higher/Lower</a>
+  </nav>
+  <div class="container">
+    <!-- About Section -->
+    <div id="aboutSection" class="game-section active">
+      <h2>Welcome!</h2>
+      <p>Select one of the games above to get started. Enjoy mining coins or testing your luck with higher or lower guesses!</p>
+    </div>
+
+    <!-- Idle Miner Game Section -->
+    <div id="idleMinerSection" class="game-section">
+      <h2>Idle Miner</h2>
+      <p>Click the button to mine coins. Use your coins to buy upgrades and hire miners that mine automatically every second!</p>
+      <p><strong>Coins:</strong> <span id="idleCoins">0</span></p>
+      <p><strong>Click Power:</strong> <span id="idleClickPower">1</span></p>
+      <p><strong>Miners:</strong> <span id="idleMiners">0</span></p>
+      <button id="mineButton">Mine!</button>
+      <button id="upgradePickaxeButton">
+        Buy Pickaxe Upgrade (Cost: <span id="pickaxeCost">10</span> coins)
+      </button>
+      <button id="hireMinerButton">
+        Hire Miner (Cost: <span id="minerCost">50</span> coins)
+      </button>
+      <br>
+      <button id="resetIdleButton" style="background: #cc0000;">Reset Idle Miner</button>
+    </div>
+
+    <!-- Higher/Lower Game Section -->
+    <div id="higherLowerSection" class="game-section">
+      <h2>Higher/Lower</h2>
+      <p>Guess if the next number (1–100) will be <strong>higher</strong> or <strong>lower</strong> than the current one!</p>
+      <p><strong>Current Number:</strong> <span id="hlCurrentNumber"></span></p>
+      <p><strong>Your Score:</strong> <span id="hlScore">0</span></p>
+      <div id="hlMessage"></div>
+      <button id="higherButton">Higher</button>
+      <button id="lowerButton">Lower</button>
+      <br>
+      <button id="resetHLButton" style="background: #cc0000;">Reset Higher/Lower</button>
+    </div>
+  </div>
+
+  <script>
+    /* Navigation: show/hide game sections */
+    document.querySelectorAll('nav a').forEach(function(link) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        var targetId = this.getAttribute('data-target');
+        document.querySelectorAll('.game-section').forEach(function(section) {
+          section.classList.remove('active');
+        });
+        document.getElementById(targetId).classList.add('active');
+      });
+    });
+
+    /* ----------------- Idle Miner Game ----------------- */
+    var idleData = {
+      coins: 0,
+      clickPower: 1,
+      miners: 0,
+      pickaxeCost: 10,
+      minerCost: 50
+    };
+
+    function loadIdleData() {
+      var saved = localStorage.getItem('idleMinerData');
+      if (saved) {
+        idleData = JSON.parse(saved);
+      }
+      updateIdleDisplay();
+    }
+
+    function saveIdleData() {
+      localStorage.setItem('idleMinerData', JSON.stringify(idleData));
+    }
+
+    function updateIdleDisplay() {
+      document.getElementById('idleCoins').innerText = Math.floor(idleData.coins);
+      document.getElementById('idleClickPower').innerText = idleData.clickPower;
+      document.getElementById('idleMiners').innerText = idleData.miners;
+      document.getElementById('pickaxeCost').innerText = Math.floor(idleData.pickaxeCost);
+      document.getElementById('minerCost').innerText = Math.floor(idleData.minerCost);
+    }
+
+    document.getElementById('mineButton').addEventListener('click', function() {
+      idleData.coins += idleData.clickPower;
+      updateIdleDisplay();
+      saveIdleData();
+    });
+
+    document.getElementById('upgradePickaxeButton').addEventListener('click', function() {
+      if (idleData.coins >= idleData.pickaxeCost) {
+        idleData.coins -= idleData.pickaxeCost;
+        idleData.clickPower += 1;
+        idleData.pickaxeCost *= 1.5;
+        updateIdleDisplay();
+        saveIdleData();
+      } else {
+        alert("Not enough coins for a pickaxe upgrade!");
+      }
+    });
+
+    document.getElementById('hireMinerButton').addEventListener('click', function() {
+      if (idleData.coins >= idleData.minerCost) {
+        idleData.coins -= idleData.minerCost;
+        idleData.miners += 1;
+        idleData.minerCost *= 1.7;
+        updateIdleDisplay();
+        saveIdleData();
+      } else {
+        alert("Not enough coins to hire a miner!");
+      }
+    });
+
+    document.getElementById('resetIdleButton').addEventListener('click', function() {
+      if (confirm("Are you sure you want to reset the Idle Miner game?")) {
+        idleData = {
+          coins: 0,
+          clickPower: 1,
+          miners: 0,
+          pickaxeCost: 10,
+          minerCost: 50
+        };
+        updateIdleDisplay();
+        saveIdleData();
+      }
+    });
+
+    // Auto-mine: each miner adds 1 coin per second
+    setInterval(function() {
+      if (idleData.miners > 0) {
+        idleData.coins += idleData.miners;
+        updateIdleDisplay();
+        saveIdleData();
+      }
+    }, 1000);
+
+    /* ---------------- Higher/Lower Game ---------------- */
+    var hlData = {
+      currentNumber: 0,
+      score: 0
+    };
+
+    function startHLGame() {
+      hlData.currentNumber = Math.floor(Math.random() * 100) + 1;
+      hlData.score = 0;
+    }
+
+    function loadHLData() {
+      var saved = localStorage.getItem('hlGameData');
+      if (saved) {
+        hlData = JSON.parse(saved);
+      } else {
+        startHLGame();
+      }
+      updateHLDisplay();
+    }
+
+    function saveHLData() {
+      localStorage.setItem('hlGameData', JSON.stringify(hlData));
+    }
+
+    function updateHLDisplay() {
+      document.getElementById('hlCurrentNumber').innerText = hlData.currentNumber;
+      document.getElementById('hlScore').innerText = hlData.score;
+      document.getElementById('hlMessage').innerText = "";
+    }
+
+    document.getElementById('higherButton').addEventListener('click', function() {
+      var nextNumber = Math.floor(Math.random() * 100) + 1;
+      if (nextNumber > hlData.currentNumber) {
+        hlData.score++;
+        document.getElementById('hlMessage').innerText = "Correct! Next number was " + nextNumber;
+        hlData.currentNumber = nextNumber;
+        updateHLDisplay();
+        saveHLData();
+      } else {
+        document.getElementById('hlMessage').innerText = "Wrong! Next number was " + nextNumber + ". Game Over!";
+        alert("Game Over! Your score: " + hlData.score);
+        startHLGame();
+        updateHLDisplay();
+        saveHLData();
+      }
+    });
+
+    document.getElementById('lowerButton').addEventListener('click', function() {
+      var nextNumber = Math.floor(Math.random() * 100) + 1;
+      if (nextNumber < hlData.currentNumber) {
+        hlData.score++;
+        document.getElementById('hlMessage').innerText = "Correct! Next number was " + nextNumber;
+        hlData.currentNumber = nextNumber;
+        updateHLDisplay();
+        saveHLData();
+      } else {
+        document.getElementById('hlMessage').innerText = "Wrong! Next number was " + nextNumber + ". Game Over!";
+        alert("Game Over! Your score: " + hlData.score);
+        startHLGame();
+        updateHLDisplay();
+        saveHLData();
+      }
+    });
+
+    document.getElementById('resetHLButton').addEventListener('click', function() {
+      if (confirm("Reset the Higher/Lower game?")) {
+        startHLGame();
+        updateHLDisplay();
+        saveHLData();
+      }
+    });
+
+    /* ---------------- Initialization ---------------- */
+    // Since the script is at the end of the body, elements are already loaded.
+    loadIdleData();
+    loadHLData();
+  </script>
+</body>
+</html>
