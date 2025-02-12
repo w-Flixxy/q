@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Game Center</title>
   <style>
-    /* CSS Variables for Light Mode */
+    /* CSS-variabelen voor light mode */
     :root {
       --bg-light: #f0f0f0;
       --text-light: #333;
@@ -14,7 +14,7 @@
       --button-light: #4285F4;
       --button-hover-light: #3367D6;
     }
-    /* Global Styles */
+    /* Globale stijlen */
     body {
       margin: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -70,7 +70,7 @@
       .container { margin: 10px; padding: 15px; }
       nav { flex-direction: column; }
     }
-    /* Dark Mode Styles */
+    /* Dark mode-stijlen */
     body.dark {
       background: #121212;
       color: #e0e0e0;
@@ -94,7 +94,7 @@
       border-color: #444;
       background: #333;
     }
-    /* Idle Miner Styles */
+    /* Idle Miner-stijlen */
     #mineArea {
       width: 100%;
       height: 200px;
@@ -125,12 +125,12 @@
       0% { opacity: 1; transform: translateY(0); }
       100% { opacity: 0; transform: translateY(-50px); }
     }
-    /* Higher/Lower Styles */
+    /* Higher/Lower-stijlen */
     #hlCardsContainer {
       position: relative;
-      width: 150px; /* width of the current card */
+      width: 150px; /* breedte van de huidige kaart */
       margin: 0 auto 10px auto;
-      height: 200px; /* same height as current card */
+      height: 200px; /* zelfde hoogte als huidige kaart */
     }
     #hlCurrentCard {
       width: 150px;
@@ -166,8 +166,8 @@
       justify-content: center;
       font-size: 2em;
       position: absolute;
-      left: -110px;  /* positioned to the left of the current card */
-      top: 35px;     /* vertically centered relative to current card */
+      left: -110px;  /* links van de huidige kaart */
+      top: 35px;     /* verticaal gecentreerd t.o.v. de huidige kaart */
     }
     #hlButtons {
       text-align: center;
@@ -177,7 +177,7 @@
       font-size: 1.5em;
       padding: 15px 20px;
     }
-    /* Plinko Styles */
+    /* Plinko-stijlen */
     #plinkoCanvas {
       border: 2px solid var(--button-light);
       border-radius: 10px;
@@ -185,7 +185,7 @@
       display: block;
       margin: 10px auto;
     }
-    /* Slot Machine Styles */
+    /* Slot Machine-stijlen */
     .reel {
       width: 80px;
       height: 80px;
@@ -218,7 +218,7 @@
     <a href="#" id="toggleDarkMode">Toggle Dark Mode</a>
   </nav>
   <div class="container">
-    <!-- Idle Miner Section -->
+    <!-- Idle Miner-sectie -->
     <div id="idleMinerSection" class="game-section active">
       <h2>Idle Miner</h2>
       <div id="mineArea">
@@ -235,7 +235,7 @@
         <button id="resetIdleButton" style="background:#cc0000;">Reset</button>
       </div>
     </div>
-    <!-- Higher/Lower Section -->
+    <!-- Higher/Lower-sectie -->
     <div id="higherLowerSection" class="game-section">
       <h2>Higher/Lower</h2>
       <div id="hlCardsContainer">
@@ -251,7 +251,7 @@
         <button id="resetHLButton" style="background:#cc0000;">Reset</button>
       </div>
     </div>
-    <!-- Plinko Section -->
+    <!-- Plinko-sectie -->
     <div id="plinkoSection" class="game-section">
       <h2>Plinko</h2>
       <div style="text-align:center; margin-bottom:10px;">
@@ -267,7 +267,7 @@
         <button id="resetPlinkoButton" style="background:#cc0000;">Reset</button>
       </div>
     </div>
-    <!-- Slot Machine Section -->
+    <!-- Slot Machine-sectie -->
     <div id="slotMachineSection" class="game-section">
       <h2>Slot Machine</h2>
       <div style="text-align:center; margin-bottom:10px;">
@@ -290,14 +290,14 @@
   </div>
   <script>
     /*******************************
-     * Global Balance Updates
+     * Globale balans-updates
      *******************************/
     function updateGlobalBalanceDisplays() {
       document.getElementById('globalBalancePlinko').innerText = idleData.coins.toFixed(1);
       document.getElementById('globalBalanceSlot').innerText = idleData.coins.toFixed(1);
     }
     /*******************************
-     * Navigation & Dark Mode
+     * Navigatie & Dark Mode
      *******************************/
     document.querySelectorAll('nav a[data-target]').forEach(link => {
       link.addEventListener('click', function(e) {
@@ -316,7 +316,7 @@
       document.body.classList.add('dark');
     }
     /*******************************
-     * Global Currency (Idle Miner Data)
+     * Globale valuta (Idle Miner Data)
      *******************************/
     let idleData = {
       coins: 0,
@@ -341,7 +341,7 @@
       document.getElementById('minerCost').innerText = Math.floor(idleData.minerCost);
       updateGlobalBalanceDisplays();
     }
-    // Idle Miner: click to mine coins with floating coin animation
+    // Idle Miner: klik op het mijngebied om coins te verdienen
     document.getElementById('mineArea').addEventListener('click', function(e) {
       idleData.coins += idleData.clickPower;
       updateIdleDisplay();
@@ -460,11 +460,11 @@
     const plinkoCtx = plinkoCanvas.getContext('2d');
     const plinkoWidth = plinkoCanvas.width;
     const plinkoHeight = plinkoCanvas.height;
-    // 9 bins with fixed multipliers: 10x, 2x, 1x, 0.5x, 0.2x, 0.5x, 1x, 2x, 10x
+    // 9 bins met vaste multipliers: 10x, 2x, 1x, 0.5x, 0.2x, 0.5x, 1x, 2x, 10x
     const binCount = 9;
     const binMultipliers = [10, 2, 1, 0.5, 0.2, 0.5, 1, 2, 10];
     const binWidth = plinkoWidth / binCount;
-    // Generate pegs
+    // Genereer stokken (pegs)
     const plinkoPegs = [];
     const pegRows = 8;
     const pegSpacingX = plinkoWidth / 10;
@@ -484,7 +484,7 @@
     let plinkoBalls = [];
     function updatePlinko() {
       plinkoCtx.clearRect(0, 0, plinkoWidth, plinkoHeight);
-      // Draw bins
+      // Teken bins
       for (let i = 0; i < binCount; i++) {
         plinkoCtx.fillStyle = "#ddd";
         plinkoCtx.fillRect(i * binWidth, plinkoHeight - 30, binWidth, 30);
@@ -493,33 +493,33 @@
         plinkoCtx.textAlign = "center";
         plinkoCtx.fillText(binMultipliers[i] + "x", i * binWidth + binWidth / 2, plinkoHeight - 10);
       }
-      // Draw pegs
+      // Teken stokken
       plinkoCtx.fillStyle = "#007acc";
       plinkoPegs.forEach(peg => {
         plinkoCtx.beginPath();
         plinkoCtx.arc(peg.x, peg.y, peg.r, 0, Math.PI * 2);
         plinkoCtx.fill();
       });
-      // Update and draw balls
+      // Update en teken ballen
       for (let b = plinkoBalls.length - 1; b >= 0; b--) {
         const ball = plinkoBalls[b];
-        ball.vy += 0.6;  // increased gravity for faster falling
-        // Add small random horizontal noise to make outcomes less rigged
-        ball.vx += (Math.random() - 0.5) * 0.1;
+        ball.vy += 0.6;  // zwaartekracht
+        // Voeg heel subtiele horizontale ruis toe (optioneel, erg laag)
+        ball.vx += (Math.random() - 0.5) * 0.02;
         ball.x += ball.vx;
         ball.y += ball.vy;
-        // Dampen horizontal movement near edges
+        // Rem horizontale snelheid bij randen
         if (ball.x < ball.r + 20) {
           ball.vx = Math.abs(ball.vx) * 0.5;
         }
         if (ball.x > plinkoWidth - ball.r - 20) {
           ball.vx = -Math.abs(ball.vx) * 0.5;
         }
-        // Bounce off walls
+        // Botsing met wanden
         if (ball.x < ball.r || ball.x > plinkoWidth - ball.r) {
           ball.vx *= -1;
         }
-        // Peg collisions using elastic reflection to avoid sticking
+        // Botsingen met stokken (pegs) – minder elastisch en alleen lichte zijwaartse duw
         plinkoPegs.forEach(peg => {
           let dx = ball.x - peg.x;
           let dy = ball.y - peg.y;
@@ -529,18 +529,16 @@
             let nx = dx / dist;
             let ny = dy / dist;
             let overlap = minDist - dist;
+            // Verplaats de bal net buiten de peg
             ball.x += nx * overlap;
             ball.y += ny * overlap;
-            // Reflect velocity
-            let dot = ball.vx * nx + ball.vy * ny;
-            ball.vx = ball.vx - 2 * dot * nx;
-            ball.vy = ball.vy - 2 * dot * ny;
-            // Add extra random impulse to help dislodge the ball
-            ball.vx += (Math.random() - 0.5) * 0.3;
-            ball.vy += (Math.random() - 0.5) * 0.3;
+            // Geef een kleine zijwaartse impuls, maar behoud de neerwaartse snelheid grotendeels
+            ball.vx += nx * 0.03;
+            // Optioneel: lichte demping op de verticale snelheid (niet te sterk)
+            ball.vy *= 0.98;
           }
         });
-        // Ball-to-ball collisions
+        // (Optioneel) Bal-tot-bal botsingen kunnen eruit worden gelaten voor eenvoud; hier laten we ze lichtjes gebeuren
         for (let i = 0; i < plinkoBalls.length; i++) {
           for (let j = i + 1; j < plinkoBalls.length; j++) {
             let ballA = plinkoBalls[i];
@@ -561,12 +559,12 @@
             }
           }
         }
-        // Draw ball
+        // Teken de bal
         plinkoCtx.fillStyle = "#e67e22";
         plinkoCtx.beginPath();
         plinkoCtx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
         plinkoCtx.fill();
-        // If ball reached bottom
+        // Als de bal de bodem heeft bereikt, pas de winst toe en verwijder de bal
         if (ball.y + ball.r > plinkoHeight - 30) {
           let binIndex = Math.floor(ball.x / binWidth);
           if (binIndex < 0) binIndex = 0;
