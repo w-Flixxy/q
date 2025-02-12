@@ -89,7 +89,8 @@
     body.dark nav a:hover {
       background: #555;
     }
-    body.dark #plinkoCanvas, body.dark .reel {
+    body.dark #plinkoCanvas, 
+    body.dark .reel {
       border-color: #444;
       background: #333;
     }
@@ -125,23 +126,12 @@
       100% { opacity: 0; transform: translateY(-50px); }
     }
     /* Higher/Lower Styles */
+    /* We position the current card centered in a container with relative positioning */
     #hlCardsContainer {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    #hlPrevCard {
-      width: 100px;
-      height: 130px;
-      background: #fff;
-      border: 2px solid var(--button-light);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2em;
+      position: relative;
+      width: 150px; /* width of the current card */
+      margin: 0 auto 10px auto;
+      height: 200px; /* same height as current card */
     }
     #hlCurrentCard {
       width: 150px;
@@ -153,15 +143,32 @@
       align-items: center;
       justify-content: center;
       font-size: 3em;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
       perspective: 1000px;
     }
     #hlCurrentCard.flip {
       animation: flipCard 0.6s forwards;
     }
     @keyframes flipCard {
-      0% { transform: rotateY(0deg); }
-      50% { transform: rotateY(90deg); }
-      100% { transform: rotateY(0deg); }
+      0% { transform: translateX(-50%) rotateY(0deg); }
+      50% { transform: translateX(-50%) rotateY(90deg); }
+      100% { transform: translateX(-50%) rotateY(0deg); }
+    }
+    #hlPrevCard {
+      width: 100px;
+      height: 130px;
+      background: #fff;
+      border: 2px solid var(--button-light);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      position: absolute;
+      left: -110px;  /* positioned to the left of the current card */
+      top: 35px;     /* vertically centered relative to current card */
     }
     #hlButtons {
       text-align: center;
@@ -497,7 +504,7 @@
       // Update and draw balls
       for (let b = plinkoBalls.length - 1; b >= 0; b--) {
         const ball = plinkoBalls[b];
-        ball.vy += 0.3;  // gravity
+        ball.vy += 0.6;  // increased gravity for faster falling
         ball.x += ball.vx;
         ball.y += ball.vy;
         // Dampen horizontal movement near edges
@@ -525,7 +532,29 @@
             ball.vy = Math.sin(angle) * 0.2;
           }
         });
-        // Draw ball
+      }
+      // Ball-to-ball collisions
+      for (let i = 0; i < plinkoBalls.length; i++) {
+        for (let j = i + 1; j < plinkoBalls.length; j++) {
+          let ballA = plinkoBalls[i];
+          let ballB = plinkoBalls[j];
+          let dx = ballB.x - ballA.x;
+          let dy = ballB.y - ballA.y;
+          let dist = Math.sqrt(dx*dx + dy*dy);
+          let minDist = ballA.r + ballB.r;
+          if (dist < minDist) {
+            let overlap = (minDist - dist) / 2;
+            let angle = Math.atan2(dy, dx);
+            ballA.x -= Math.cos(angle) * overlap;
+            ballA.y -= Math.sin(angle) * overlap;
+            ballB.x += Math.cos(angle) * overlap;
+            ballB.y += Math.sin(angle) * overlap;
+          }
+        }
+      }
+      // Draw balls
+      for (let b = plinkoBalls.length - 1; b >= 0; b--) {
+        const ball = plinkoBalls[b];
         plinkoCtx.fillStyle = "#e67e22";
         plinkoCtx.beginPath();
         plinkoCtx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
@@ -615,13 +644,17 @@
       const symbol1 = await spinReel(reel1, 1200);
       const symbol2 = await spinReel(reel2, 1600);
       const symbol3 = await spinReel(reel3, 2000);
+      let winnings = 0;
       if (symbol1 === symbol2 && symbol2 === symbol3) {
-        let winnings = bet * 5;
-        idleData.coins += winnings;
+        winnings = bet * 5;
         document.getElementById('slotResult').innerText = "Jackpot! You win " + winnings + " coins!";
+      } else if (symbol1 === symbol2 || symbol1 === symbol3 || symbol2 === symbol3) {
+        winnings = bet * 2;
+        document.getElementById('slotResult').innerText = "You win " + winnings + " coins!";
       } else {
         document.getElementById('slotResult').innerText = "Sorry, you lose.";
       }
+      idleData.coins += winnings;
       updateIdleDisplay();
       saveIdleData();
     });
