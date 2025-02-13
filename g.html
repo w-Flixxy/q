@@ -94,38 +94,19 @@
       border-color: #444;
       background: #333;
     }
-    /* Idle Miner-stijlen */
-    #mineArea {
-      width: 100%;
-      height: 200px;
-      background: linear-gradient(135deg, #555, #333);
-      border: 2px solid #222;
+    /* Idle Miner-stijlen (nieuw) */
+    #idleMinerSection {
+      text-align: center;
+    }
+    #shaftDisplay {
+      margin: 10px auto;
+      padding: 20px;
+      border: 2px solid #ccc;
       border-radius: 10px;
-      position: relative;
-      margin-bottom: 15px;
-      cursor: pointer;
-      overflow: hidden;
+      background: #eee;
+      width: 300px;
     }
-    #mineArea .minerIcon {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 4em;
-      pointer-events: none;
-      user-select: none;
-    }
-    .coin {
-      position: absolute;
-      font-size: 1.5em;
-      pointer-events: none;
-      animation: floatUp 1s ease-out forwards;
-    }
-    @keyframes floatUp {
-      0% { opacity: 1; transform: translateY(0); }
-      100% { opacity: 0; transform: translateY(-50px); }
-    }
-    /* Higher/Lower-stijlen */
+    /* Higher/Lower-stijlen (ongewijzigd) */
     #hlCardsContainer {
       position: relative;
       width: 150px;
@@ -185,7 +166,7 @@
       display: block;
       margin: 10px auto;
     }
-    /* Slot Machine-stijlen */
+    /* Slot Machine-stijlen (ongewijzigd) */
     .reel {
       width: 80px;
       height: 80px;
@@ -218,21 +199,22 @@
     <a href="#" id="toggleDarkMode">Toggle Dark Mode</a>
   </nav>
   <div class="container">
-    <!-- Idle Miner-sectie -->
+    <!-- Idle Miner-sectie (nieuw) -->
     <div id="idleMinerSection" class="game-section active">
       <h2>Idle Miner</h2>
-      <div id="mineArea">
-        <div class="minerIcon">⛏️</div>
+      <div id="shaftArea">
+        <div id="shaftDisplay">
+          <div>Shaft Level: <span id="shaftLevel">1</span></div>
+          <div>Production Rate: <span id="shaftProduction">10</span> coins/sec</div>
+          <div style="margin-top:10px;"><button id="mineButton">Mine Manually</button></div>
+        </div>
       </div>
-      <div style="text-align:center;">
-        <span>Coins: <span id="idleCoins">0</span></span>
-        <span style="margin-left:20px;">Power: <span id="idleClickPower">1</span></span>
-        <span style="margin-left:20px;">Miners: <span id="idleMiners">0</span></span>
+      <div style="margin-top:10px;">
+        <button id="upgradeShaftButton">Upgrade Shaft (Cost: <span id="upgradeShaftCost">50</span> coins)</button>
+        <button id="hireManagerButton">Hire Manager (Cost: <span id="managerCost">200</span> coins)</button>
       </div>
-      <div style="text-align:center; margin-top:10px;">
-        <button id="upgradePickaxeButton">Upgrade Pickaxe<br>(Cost: <span id="pickaxeCost">10</span>)</button>
-        <button id="hireMinerButton">Hire Miner<br>(Cost: <span id="minerCost">50</span>)</button>
-        <button id="resetIdleButton" style="background:#cc0000;">Reset</button>
+      <div style="margin-top:10px;">
+        Coins: <span id="idleCoins">0</span>
       </div>
     </div>
     <!-- Higher/Lower-sectie -->
@@ -316,84 +298,77 @@
       document.body.classList.add('dark');
     }
     /*******************************
-     * Globale valuta (Idle Miner Data)
+     * Idle Miner (nieuw)
      *******************************/
     let idleData = {
       coins: 0,
-      clickPower: 1,
-      miners: 0,
-      pickaxeCost: 10,
-      minerCost: 50
+      shaft: {
+        level: 1,
+        baseProduction: 10,
+        upgradeCost: 50
+      },
+      manager: {
+        hired: false,
+        cost: 200
+      }
     };
-    function loadIdleData() {
-      const saved = localStorage.getItem('idleData');
-      if(saved) idleData = JSON.parse(saved);
-      updateIdleDisplay();
-    }
     function saveIdleData() {
       localStorage.setItem('idleData', JSON.stringify(idleData));
     }
+    function loadIdleData() {
+      const saved = localStorage.getItem('idleData');
+      if (saved) idleData = JSON.parse(saved);
+      updateIdleDisplay();
+    }
     function updateIdleDisplay() {
       document.getElementById('idleCoins').innerText = idleData.coins.toFixed(1);
-      document.getElementById('idleClickPower').innerText = idleData.clickPower;
-      document.getElementById('idleMiners').innerText = idleData.miners;
-      document.getElementById('pickaxeCost').innerText = Math.floor(idleData.pickaxeCost);
-      document.getElementById('minerCost').innerText = Math.floor(idleData.minerCost);
+      document.getElementById('shaftLevel').innerText = idleData.shaft.level;
+      let productionRate = idleData.shaft.level * idleData.shaft.baseProduction;
+      if (idleData.manager.hired) productionRate *= 2;
+      document.getElementById('shaftProduction').innerText = productionRate;
+      document.getElementById('upgradeShaftCost').innerText = Math.floor(idleData.shaft.upgradeCost);
+      document.getElementById('managerCost').innerText = idleData.manager.cost;
       updateGlobalBalanceDisplays();
     }
-    // Idle Miner: klik om coins te verdienen
-    document.getElementById('mineArea').addEventListener('click', function(e) {
-      idleData.coins += idleData.clickPower;
+    document.getElementById('mineButton').addEventListener('click', function() {
+      let manualMineAmount = idleData.shaft.level * idleData.shaft.baseProduction;
+      idleData.coins += manualMineAmount;
       updateIdleDisplay();
       saveIdleData();
-      const coin = document.createElement('div');
-      coin.className = 'coin';
-      coin.innerText = '💰';
-      const rect = this.getBoundingClientRect();
-      coin.style.left = (e.clientX - rect.left) + 'px';
-      coin.style.top = (e.clientY - rect.top) + 'px';
-      this.appendChild(coin);
-      coin.addEventListener('animationend', () => coin.remove());
     });
-    document.getElementById('upgradePickaxeButton').addEventListener('click', function() {
-      if(idleData.coins >= idleData.pickaxeCost) {
-        idleData.coins -= idleData.pickaxeCost;
-        idleData.clickPower += 1;
-        idleData.pickaxeCost *= 1.5;
+    document.getElementById('upgradeShaftButton').addEventListener('click', function() {
+      if (idleData.coins >= idleData.shaft.upgradeCost) {
+        idleData.coins -= idleData.shaft.upgradeCost;
+        idleData.shaft.level++;
+        idleData.shaft.upgradeCost *= 1.5;
         updateIdleDisplay();
         saveIdleData();
       } else {
         alert("Not enough coins!");
       }
     });
-    document.getElementById('hireMinerButton').addEventListener('click', function() {
-      if(idleData.coins >= idleData.minerCost) {
-        idleData.coins -= idleData.minerCost;
-        idleData.miners += 1;
-        idleData.minerCost *= 1.7;
+    document.getElementById('hireManagerButton').addEventListener('click', function() {
+      if (!idleData.manager.hired && idleData.coins >= idleData.manager.cost) {
+        idleData.coins -= idleData.manager.cost;
+        idleData.manager.hired = true;
         updateIdleDisplay();
         saveIdleData();
+      } else if (idleData.manager.hired) {
+        alert("Manager already hired!");
       } else {
         alert("Not enough coins!");
       }
     });
-    document.getElementById('resetIdleButton').addEventListener('click', function() {
-      if(confirm("Reset Idle Miner?")) {
-        idleData = { coins: 0, clickPower: 1, miners: 0, pickaxeCost: 10, minerCost: 50 };
-        updateIdleDisplay();
-        saveIdleData();
-      }
-    });
-    setInterval(() => {
-      if(idleData.miners > 0) {
-        idleData.coins += idleData.miners;
-        updateIdleDisplay();
-        saveIdleData();
-      }
+    setInterval(function() {
+      let productionRate = idleData.shaft.level * idleData.shaft.baseProduction;
+      if (idleData.manager.hired) productionRate *= 2;
+      idleData.coins += productionRate;
+      updateIdleDisplay();
+      saveIdleData();
     }, 1000);
     loadIdleData();
     /*******************************
-     * Higher/Lower Game
+     * Higher/Lower Game (ongewijzigd)
      *******************************/
     let hlData = {
       currentNumber: 0,
@@ -448,13 +423,13 @@
       updateHLDisplay();
     });
     document.getElementById('resetHLButton').addEventListener('click', function() {
-      if(confirm("Reset Higher/Lower?")) {
+      if (confirm("Reset Higher/Lower?")) {
         startHLGame();
       }
     });
     startHLGame();
     /*******************************
-     * Plinko Game
+     * Plinko Game (aangepast)
      *******************************/
     const plinkoCanvas = document.getElementById('plinkoCanvas');
     const plinkoCtx = plinkoCanvas.getContext('2d');
@@ -503,10 +478,10 @@
       // Update en teken ballen
       for (let b = plinkoBalls.length - 1; b >= 0; b--) {
         const ball = plinkoBalls[b];
-        // Gebruik een lagere zwaartekracht zodat de bal langzamer valt
-        ball.vy += 0.3;
-        // Verhoog de horizontale ruis zodat de bal meer van het centrum afwijkt
-        ball.vx += (Math.random() - 0.5) * 0.1;
+        // Lagere zwaartekracht voor langzamere val
+        ball.vy += 0.1;
+        // Voeg iets horizontale ruis toe
+        ball.vx += (Math.random() - 0.5) * 0.05;
         ball.x += ball.vx;
         ball.y += ball.vy;
         // Rem horizontale snelheid bij randen
@@ -520,7 +495,7 @@
         if (ball.x < ball.r || ball.x > plinkoWidth - ball.r) {
           ball.vx *= -1;
         }
-        // Botsingen met stokken (pegs) – minder elastisch en alleen een lichte zijwaartse impuls
+        // Botsingen met stokken (pegs)
         plinkoPegs.forEach(peg => {
           let dx = ball.x - peg.x;
           let dy = ball.y - peg.y;
@@ -530,7 +505,6 @@
             let nx = dx / dist;
             let ny = dy / dist;
             let overlap = minDist - dist;
-            // Verplaats de bal net buiten de peg
             ball.x += nx * overlap;
             ball.y += ny * overlap;
             // Geef een iets sterkere horizontale impuls
@@ -539,27 +513,6 @@
             ball.vy *= 0.99;
           }
         });
-        // (Optioneel) Bal-tot-bal botsingen (lichtjes)
-        for (let i = 0; i < plinkoBalls.length; i++) {
-          for (let j = i + 1; j < plinkoBalls.length; j++) {
-            let ballA = plinkoBalls[i];
-            let ballB = plinkoBalls[j];
-            let dx = ballB.x - ballA.x;
-            let dy = ballB.y - ballA.y;
-            let dist = Math.sqrt(dx * dx + dy * dy);
-            let minDist = ballA.r + ballB.r;
-            if (dist < minDist && dist > 0) {
-              let overlap = (minDist - dist) / 2;
-              let angle = Math.atan2(dy, dx);
-              let nx = Math.cos(angle);
-              let ny = Math.sin(angle);
-              ballA.x -= nx * overlap;
-              ballA.y -= ny * overlap;
-              ballB.x += nx * overlap;
-              ballB.y += ny * overlap;
-            }
-          }
-        }
         // Teken de bal
         plinkoCtx.fillStyle = "#e67e22";
         plinkoCtx.beginPath();
@@ -593,12 +546,12 @@
       idleData.coins -= bet;
       updateIdleDisplay();
       saveIdleData();
-      // Pas de initiële horizontale snelheid aan zodat de bal niet te gecentreerd begint
+      // Gebruik lagere initiële snelheden zodat de bal niet te snel valt
       let ball = {
-        x: plinkoWidth / 2 + (Math.random() - 0.5) * 20,
+        x: plinkoWidth / 2 + (Math.random() - 0.5) * 10,
         y: 20,
         r: 8,
-        vx: (Math.random() - 0.5) * 3,
+        vx: (Math.random() - 0.5) * 1,
         vy: 0,
         bet: bet
       };
@@ -611,7 +564,7 @@
     });
     updatePlinko();
     /*******************************
-     * Slot Machine Game
+     * Slot Machine Game (ongewijzigd)
      *******************************/
     const slotSymbols = ["🍒", "🍋", "🔔", "⭐", "7️⃣", "🍀"];
     function spinReel(reelElement, duration) {
