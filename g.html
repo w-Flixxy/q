@@ -94,17 +94,36 @@
       border-color: #444;
       background: #333;
     }
-    /* Idle Miner-stijlen (nieuw) */
+    /* Idle Miner-stijlen (herwerkt voor meerdere shafts) */
     #idleMinerSection {
       text-align: center;
     }
-    #shaftDisplay {
-      margin: 10px auto;
-      padding: 20px;
+    #coinsDisplay {
+      font-size: 1.5em;
+      margin-bottom: 10px;
+    }
+    #shaftsContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    .shaft {
       border: 2px solid #ccc;
       border-radius: 10px;
       background: #eee;
+      padding: 10px;
       width: 300px;
+      margin: 0 auto;
+      text-align: left;
+    }
+    .shaft h3 {
+      margin: 0 0 10px;
+    }
+    .shaft button {
+      font-size: 0.9em;
+      padding: 5px 10px;
+      margin: 3px 0;
     }
     /* Higher/Lower-stijlen (ongewijzigd) */
     #hlCardsContainer {
@@ -199,22 +218,15 @@
     <a href="#" id="toggleDarkMode">Toggle Dark Mode</a>
   </nav>
   <div class="container">
-    <!-- Idle Miner-sectie (nieuw) -->
+    <!-- Idle Miner-sectie (herwerkt) -->
     <div id="idleMinerSection" class="game-section active">
       <h2>Idle Miner</h2>
-      <div id="shaftArea">
-        <div id="shaftDisplay">
-          <div>Shaft Level: <span id="shaftLevel">1</span></div>
-          <div>Production Rate: <span id="shaftProduction">10</span> coins/sec</div>
-          <div style="margin-top:10px;"><button id="mineButton">Mine Manually</button></div>
-        </div>
+      <div id="coinsDisplay">Coins: <span id="idleCoins">0</span></div>
+      <div id="shaftsContainer">
+        <!-- Shaft-panelen worden hier dynamisch ingevoegd -->
       </div>
       <div style="margin-top:10px;">
-        <button id="upgradeShaftButton">Upgrade Shaft (Cost: <span id="upgradeShaftCost">50</span> coins)</button>
-        <button id="hireManagerButton">Hire Manager (Cost: <span id="managerCost">200</span> coins)</button>
-      </div>
-      <div style="margin-top:10px;">
-        Coins: <span id="idleCoins">0</span>
+        <button id="purchaseShaftButton">Purchase New Shaft (Cost: <span id="newShaftCost">500</span> coins)</button>
       </div>
     </div>
     <!-- Higher/Lower-sectie -->
@@ -298,19 +310,14 @@
       document.body.classList.add('dark');
     }
     /*******************************
-     * Idle Miner (nieuw)
+     * Idle Miner – Meerdere Shafts
      *******************************/
     let idleData = {
       coins: 0,
-      shaft: {
-        level: 1,
-        baseProduction: 10,
-        upgradeCost: 50
-      },
-      manager: {
-        hired: false,
-        cost: 200
-      }
+      shafts: [
+        { level: 1, baseProduction: 10, upgradeCost: 50, managerHired: false, managerCost: 200 }
+      ],
+      newShaftCost: 500
     };
     function saveIdleData() {
       localStorage.setItem('idleData', JSON.stringify(idleData));
@@ -322,47 +329,87 @@
     }
     function updateIdleDisplay() {
       document.getElementById('idleCoins').innerText = idleData.coins.toFixed(1);
-      document.getElementById('shaftLevel').innerText = idleData.shaft.level;
-      let productionRate = idleData.shaft.level * idleData.shaft.baseProduction;
-      if (idleData.manager.hired) productionRate *= 2;
-      document.getElementById('shaftProduction').innerText = productionRate;
-      document.getElementById('upgradeShaftCost').innerText = Math.floor(idleData.shaft.upgradeCost);
-      document.getElementById('managerCost').innerText = idleData.manager.cost;
+      document.getElementById('newShaftCost').innerText = Math.floor(idleData.newShaftCost);
       updateGlobalBalanceDisplays();
+      renderShafts();
     }
-    document.getElementById('mineButton').addEventListener('click', function() {
-      let manualMineAmount = idleData.shaft.level * idleData.shaft.baseProduction;
-      idleData.coins += manualMineAmount;
+    function renderShafts() {
+      const container = document.getElementById('shaftsContainer');
+      container.innerHTML = '';
+      idleData.shafts.forEach((shaft, index) => {
+        // Bereken productie: basis = level * baseProduction; als manager is ingehuurd, dubbele productie bij automatische productie
+        let prodManual = shaft.level * shaft.baseProduction;
+        let prodAuto = shaft.managerHired ? prodManual * 2 : 0;
+        const div = document.createElement('div');
+        div.className = 'shaft';
+        div.innerHTML = `
+          <h3>Shaft #${index+1}</h3>
+          <div>Level: ${shaft.level}</div>
+          <div>Manual Mine: ${prodManual} coins</div>
+          <div>Auto Production: ${prodAuto} coins/sec</div>
+          <div>Upgrade Cost: ${Math.floor(shaft.upgradeCost)} coins</div>
+          <div>Manager: ${shaft.managerHired ? 'Hired' : 'Not Hired (Cost: ' + shaft.managerCost + ')'}</div>
+          <div style="margin-top:5px;">
+            <button onclick="manualMine(${index})">Mine Manually</button>
+            <button onclick="upgradeShaft(${index})">Upgrade Shaft</button>
+            <button onclick="hireManager(${index})">Hire Manager</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+    function manualMine(index) {
+      let shaft = idleData.shafts[index];
+      let amount = shaft.level * shaft.baseProduction;
+      idleData.coins += amount;
       updateIdleDisplay();
       saveIdleData();
-    });
-    document.getElementById('upgradeShaftButton').addEventListener('click', function() {
-      if (idleData.coins >= idleData.shaft.upgradeCost) {
-        idleData.coins -= idleData.shaft.upgradeCost;
-        idleData.shaft.level++;
-        idleData.shaft.upgradeCost *= 1.5;
+    }
+    function upgradeShaft(index) {
+      let shaft = idleData.shafts[index];
+      if (idleData.coins >= shaft.upgradeCost) {
+        idleData.coins -= shaft.upgradeCost;
+        shaft.level++;
+        shaft.upgradeCost *= 1.5;
         updateIdleDisplay();
         saveIdleData();
       } else {
-        alert("Not enough coins!");
+        alert("Not enough coins to upgrade this shaft!");
       }
-    });
-    document.getElementById('hireManagerButton').addEventListener('click', function() {
-      if (!idleData.manager.hired && idleData.coins >= idleData.manager.cost) {
-        idleData.coins -= idleData.manager.cost;
-        idleData.manager.hired = true;
+    }
+    function hireManager(index) {
+      let shaft = idleData.shafts[index];
+      if (!shaft.managerHired && idleData.coins >= shaft.managerCost) {
+        idleData.coins -= shaft.managerCost;
+        shaft.managerHired = true;
         updateIdleDisplay();
         saveIdleData();
-      } else if (idleData.manager.hired) {
-        alert("Manager already hired!");
+      } else if (shaft.managerHired) {
+        alert("Manager already hired for this shaft!");
       } else {
-        alert("Not enough coins!");
+        alert("Not enough coins to hire manager!");
+      }
+    }
+    document.getElementById('purchaseShaftButton').addEventListener('click', function() {
+      if (idleData.coins >= idleData.newShaftCost) {
+        idleData.coins -= idleData.newShaftCost;
+        idleData.shafts.push({ level: 1, baseProduction: 10, upgradeCost: 50, managerHired: false, managerCost: 200 });
+        // Nieuwe shaft kosten kunnen bijvoorbeeld met 1.5 worden verhoogd
+        idleData.newShaftCost *= 1.5;
+        updateIdleDisplay();
+        saveIdleData();
+      } else {
+        alert("Not enough coins to purchase a new shaft!");
       }
     });
+    // Automatische productie: per seconde krijgt elke shaft met manager zijn productie toegevoegd
     setInterval(function() {
-      let productionRate = idleData.shaft.level * idleData.shaft.baseProduction;
-      if (idleData.manager.hired) productionRate *= 2;
-      idleData.coins += productionRate;
+      idleData.shafts.forEach(shaft => {
+        if (shaft.managerHired) {
+          let prod = shaft.level * shaft.baseProduction * 2;
+          idleData.coins += prod;
+        }
+      });
       updateIdleDisplay();
       saveIdleData();
     }, 1000);
@@ -480,7 +527,7 @@
         const ball = plinkoBalls[b];
         // Lagere zwaartekracht voor langzamere val
         ball.vy += 0.1;
-        // Voeg iets horizontale ruis toe
+        // Iets wat horizontale ruis
         ball.vx += (Math.random() - 0.5) * 0.05;
         ball.x += ball.vx;
         ball.y += ball.vy;
