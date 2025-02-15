@@ -111,7 +111,7 @@
       border-color: #555;
       color: #e0e0e0;
     }
-    /* Idle Miner-stijlen (multiple shafts) */
+    /* Idle Miner – Multiple Shafts */
     #idleMinerSection {
       text-align: center;
     }
@@ -146,7 +146,7 @@
     #purchaseShaftButton {
       font-size: 1em;
     }
-    /* Higher/Lower-stijlen */
+    /* Higher/Lower */
     #hlCardsContainer {
       position: relative;
       width: 150px;
@@ -198,7 +198,7 @@
       font-size: 1.5em;
       padding: 15px 20px;
     }
-    /* Plinko-stijlen */
+    /* Plinko */
     #plinkoCanvas {
       border: 2px solid var(--button-light);
       border-radius: 10px;
@@ -206,7 +206,7 @@
       display: block;
       margin: 10px auto;
     }
-    /* Slot Machine-stijlen */
+    /* Slot Machine */
     .reel {
       width: 80px;
       height: 80px;
@@ -268,7 +268,7 @@
         <button id="resetHLButton" style="background:#cc0000;">Reset</button>
       </div>
     </div>
-    <!-- Plinko Section -->
+    <!-- Plinko Section (Old Plinko) -->
     <div id="plinkoSection" class="game-section">
       <h2>Plinko</h2>
       <div style="text-align:center; margin-bottom:10px;">
@@ -497,7 +497,7 @@
     });
     startHLGame();
     /*******************************
-     * PLINKO GAME – REALISTIC
+     * PLINKO GAME – OLD VERSION
      *******************************/
     const plinkoCanvas = document.getElementById('plinkoCanvas');
     const plinkoCtx = plinkoCanvas.getContext('2d');
@@ -507,7 +507,7 @@
     const binCount = 9;
     const binMultipliers = [10, 2, 1, 0.5, 0.2, 0.5, 1, 2, 10];
     const binWidth = plinkoWidth / binCount;
-    // Generate pegs – using 10 rows for a realistic binomial outcome
+    // Generate pegs – use 10 rows for a binomial outcome
     const plinkoPegs = [];
     const pegRows = 10;
     const pegSpacingX = plinkoWidth / 10;
@@ -525,8 +525,8 @@
       }
     }
     let plinkoBalls = [];
-    // Use a lower gravity so balls fall very slowly
-    const gravity = 0.01;  // decreased from 0.03 to 0.01
+    // Use very low gravity so balls fall slowly
+    const gravity = 0.01;
     function updatePlinko() {
       plinkoCtx.clearRect(0, 0, plinkoWidth, plinkoHeight);
       // Draw bins
@@ -548,13 +548,12 @@
       // Update and draw balls
       for (let b = plinkoBalls.length - 1; b >= 0; b--) {
         const ball = plinkoBalls[b];
-        // Apply very low gravity so the ball falls slowly
-        ball.vy += gravity;
-        // Add a bit more horizontal noise to allow reaching outer bins
+        ball.vy += gravity;  // very low gravity
+        // Add some horizontal noise (increased range to allow outer bin reach)
         ball.vx += (Math.random() - 0.5) * 0.2;
         ball.x += ball.vx;
         ball.y += ball.vy;
-        // Limit horizontal speed near edges
+        // Constrain horizontal speed near edges
         if (ball.x < ball.r + 10) {
           ball.vx = Math.abs(ball.vx) * 0.8;
         }
@@ -564,7 +563,7 @@
         if (ball.x < ball.r || ball.x > plinkoWidth - ball.r) {
           ball.vx *= -1;
         }
-        // Collisions with pegs: reflect and add some randomness
+        // Collisions with pegs: adjust ball position and add a slight random horizontal push
         plinkoPegs.forEach(peg => {
           let dx = ball.x - peg.x;
           let dy = ball.y - peg.y;
@@ -585,7 +584,7 @@
         plinkoCtx.beginPath();
         plinkoCtx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
         plinkoCtx.fill();
-        // If ball reaches bottom, determine bin and award coins
+        // When ball reaches bottom, determine bin and award coins
         if (ball.y + ball.r > plinkoHeight - 30) {
           let binIndex = Math.floor(ball.x / binWidth);
           if (binIndex < 0) binIndex = 0;
@@ -613,7 +612,7 @@
       idleData.coins -= bet;
       updateIdleDisplay();
       saveIdleData();
-      // Use a wider initial horizontal speed range to allow reaching outer bins
+      // Use a wider initial horizontal speed so balls can reach outer bins
       let ball = {
         x: plinkoWidth / 2 + (Math.random() - 0.5) * 20,
         y: 20,
