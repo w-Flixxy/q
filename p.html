@@ -49,8 +49,12 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
       transition: background 0.3s;
     }
-    .game-section { display: none; }
-    .game-section.active { display: block; }
+    .game-section { 
+      display: none; 
+    }
+    .game-section.active { 
+      display: block; 
+    }
     button {
       padding: 10px 15px;
       margin: 10px 5px;
@@ -61,7 +65,9 @@
       cursor: pointer;
       transition: background 0.3s;
     }
-    button:hover { background: var(--button-hover-light); }
+    button:hover { 
+      background: var(--button-hover-light);
+    }
     input[type="number"] {
       padding: 5px;
       border: 1px solid #ccc;
@@ -96,7 +102,7 @@
       border-color: #444;
       background: #333;
     }
-    /* Idle Miner-stijlen (meerdere shafts) */
+    /* Idle Miner-stijlen (multiple shafts) */
     #idleMinerSection {
       text-align: center;
     }
@@ -128,7 +134,6 @@
       padding: 5px 10px;
       margin: 3px 0;
     }
-    /* Purchase new shaft button */
     #purchaseShaftButton {
       font-size: 1em;
     }
@@ -230,7 +235,7 @@
       <h2>Idle Miner</h2>
       <div id="coinsDisplay">Coins: <span id="idleCoins">0</span></div>
       <div id="shaftsContainer">
-        <!-- Shaft panels will be rendered here -->
+        <!-- Shaft panels will be rendered here dynamically -->
       </div>
       <div style="margin-top:10px;">
         <button id="purchaseShaftButton">
@@ -293,14 +298,14 @@
   </div>
   <script>
     /*******************************
-     * Global Balance Updates
+     * GLOBAL BALANCE UPDATES
      *******************************/
     function updateGlobalBalanceDisplays() {
       document.getElementById('globalBalancePlinko').innerText = idleData.coins.toFixed(1);
       document.getElementById('globalBalanceSlot').innerText = idleData.coins.toFixed(1);
     }
     /*******************************
-     * Navigation & Dark Mode
+     * NAVIGATION & DARK MODE
      *******************************/
     document.querySelectorAll('nav a[data-target]').forEach(link => {
       link.addEventListener('click', function(e) {
@@ -315,11 +320,11 @@
       document.body.classList.toggle('dark');
       localStorage.setItem('darkMode', document.body.classList.contains('dark'));
     });
-    if(localStorage.getItem('darkMode') === 'true'){
+    if (localStorage.getItem('darkMode') === 'true') {
       document.body.classList.add('dark');
     }
     /*******************************
-     * Idle Miner – Multiple Shafts
+     * IDLE MINER – MULTIPLE SHAFTS
      *******************************/
     let idleData = {
       coins: 0,
@@ -351,7 +356,7 @@
         const div = document.createElement('div');
         div.className = 'shaft';
         div.innerHTML = `
-          <h3>Shaft #${index+1}</h3>
+          <h3>Shaft #${index + 1}</h3>
           <div>Level: ${shaft.level}</div>
           <div>Manual Mine: ${manualValue} coins</div>
           <div>Auto Production: ${autoValue} coins/sec</div>
@@ -409,7 +414,7 @@
         alert("Not enough coins to purchase a new shaft!");
       }
     });
-    // Auto production: every second, each shaft with a manager produces coins
+    // Auto-production: each shaft with a manager produces coins every second
     setInterval(function() {
       idleData.shafts.forEach(shaft => {
         if (shaft.managerHired) {
@@ -422,7 +427,7 @@
     }, 1000);
     loadIdleData();
     /*******************************
-     * Higher/Lower Game (ongewijzigd)
+     * HIGHER/LOWER GAME (unchanged)
      *******************************/
     let hlData = {
       currentNumber: 0,
@@ -483,17 +488,17 @@
     });
     startHLGame();
     /*******************************
-     * Plinko Game (remade for real-like behavior)
+     * PLINKO GAME – REALISTIC
      *******************************/
     const plinkoCanvas = document.getElementById('plinkoCanvas');
     const plinkoCtx = plinkoCanvas.getContext('2d');
     const plinkoWidth = plinkoCanvas.width;
     const plinkoHeight = plinkoCanvas.height;
-    // 9 bins with multipliers: center bins (low multipliers) are more likely.
+    // 9 bins with multipliers
     const binCount = 9;
     const binMultipliers = [10, 2, 1, 0.5, 0.2, 0.5, 1, 2, 10];
     const binWidth = plinkoWidth / binCount;
-    // Generate pegs – use 10 rows for more coin toss decisions
+    // Generate pegs – using 10 rows for a realistic binomial outcome
     const plinkoPegs = [];
     const pegRows = 10;
     const pegSpacingX = plinkoWidth / 10;
@@ -511,6 +516,8 @@
       }
     }
     let plinkoBalls = [];
+    // To slow down the fall, use very low gravity and initial velocities:
+    const gravity = 0.03; // lower gravity so balls fall more slowly
     function updatePlinko() {
       plinkoCtx.clearRect(0, 0, plinkoWidth, plinkoHeight);
       // Draw bins
@@ -532,47 +539,46 @@
       // Update and draw balls
       for (let b = plinkoBalls.length - 1; b >= 0; b--) {
         const ball = plinkoBalls[b];
-        // Use low gravity so the ball falls slowly
-        ball.vy += 0.1;
-        // Add a small horizontal noise
-        ball.vx += (Math.random() - 0.5) * 0.05;
+        // Apply very low gravity so the ball falls slowly
+        ball.vy += gravity;
+        // Add a bit of horizontal noise – increase its range to allow more drift
+        ball.vx += (Math.random() - 0.5) * 0.2;
         ball.x += ball.vx;
         ball.y += ball.vy;
-        // Limit horizontal speed near the edges
-        if (ball.x < ball.r + 20) {
-          ball.vx = Math.abs(ball.vx) * 0.5;
+        // Allow the ball to bounce slightly off the walls without too much damping:
+        if (ball.x < ball.r + 10) {
+          ball.vx = Math.abs(ball.vx) * 0.8;
         }
-        if (ball.x > plinkoWidth - ball.r - 20) {
-          ball.vx = -Math.abs(ball.vx) * 0.5;
+        if (ball.x > plinkoWidth - ball.r - 10) {
+          ball.vx = -Math.abs(ball.vx) * 0.8;
         }
-        // Bounce off walls
         if (ball.x < ball.r || ball.x > plinkoWidth - ball.r) {
           ball.vx *= -1;
         }
-        // Collisions with pegs: reflect the ball with a slight random horizontal push
+        // Collisions with pegs:
         plinkoPegs.forEach(peg => {
           let dx = ball.x - peg.x;
           let dy = ball.y - peg.y;
           let dist = Math.sqrt(dx * dx + dy * dy);
           let minDist = ball.r + peg.r;
           if (dist < minDist && dist > 0) {
+            // Instead of reflecting strictly off the peg, add a random horizontal push
             let nx = dx / dist;
             let ny = dy / dist;
             let overlap = minDist - dist;
             ball.x += nx * overlap;
             ball.y += ny * overlap;
-            // Add a modest horizontal deflection
-            ball.vx += (Math.random() - 0.5) * 0.2;
-            // Preserve most of the vertical velocity
-            ball.vy *= 0.99;
+            ball.vx += (Math.random() - 0.5) * 0.3;  // increased randomness
+            // Let the vertical velocity mostly remain intact
+            ball.vy *= 0.995;
           }
         });
-        // Draw the ball
+        // Draw ball
         plinkoCtx.fillStyle = "#e67e22";
         plinkoCtx.beginPath();
         plinkoCtx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
         plinkoCtx.fill();
-        // If the ball reaches the bottom, determine the bin and award coins
+        // When ball reaches bottom, determine bin and award coins
         if (ball.y + ball.r > plinkoHeight - 30) {
           let binIndex = Math.floor(ball.x / binWidth);
           if (binIndex < 0) binIndex = 0;
@@ -600,12 +606,12 @@
       idleData.coins -= bet;
       updateIdleDisplay();
       saveIdleData();
-      // Set low initial speeds so the ball falls slowly
+      // Use a slightly larger initial horizontal velocity range so the ball can reach outer bins
       let ball = {
-        x: plinkoWidth / 2 + (Math.random() - 0.5) * 10,
+        x: plinkoWidth / 2 + (Math.random() - 0.5) * 20,
         y: 20,
         r: 8,
-        vx: (Math.random() - 0.5) * 0.5,
+        vx: (Math.random() - 0.5) * 2,
         vy: 0,
         bet: bet
       };
@@ -618,9 +624,10 @@
     });
     updatePlinko();
     /*******************************
-     * Slot Machine Game (unchanged)
+     * SLOT MACHINE GAME – PREVENT DOUBLE SPIN
      *******************************/
     const slotSymbols = ["🍒", "🍋", "🔔", "⭐", "7️⃣", "🍀"];
+    let slotSpinning = false;
     function spinReel(reelElement, duration) {
       return new Promise(resolve => {
         const emojiElement = reelElement.querySelector('.reel-emoji');
@@ -638,13 +645,17 @@
       });
     }
     document.getElementById('spinSlotButton').addEventListener('click', async function() {
+      if (slotSpinning) return;  // Prevent multiple spins at once
+      slotSpinning = true;
       let bet = parseFloat(document.getElementById('betAmount').value);
       if (isNaN(bet) || bet <= 0) {
         alert("Enter a valid bet.");
+        slotSpinning = false;
         return;
       }
       if (idleData.coins < bet) {
         alert("Not enough coins!");
+        slotSpinning = false;
         return;
       }
       idleData.coins -= bet;
@@ -670,6 +681,7 @@
       idleData.coins += winnings;
       updateIdleDisplay();
       saveIdleData();
+      slotSpinning = false;
     });
   </script>
 </body>
