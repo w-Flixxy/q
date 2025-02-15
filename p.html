@@ -102,6 +102,15 @@
       border-color: #444;
       background: #333;
     }
+    /* Additional dark mode for Idle Miner */
+    body.dark #coinsDisplay {
+      color: #e0e0e0;
+    }
+    body.dark #shaftsContainer .shaft {
+      background: #2a2a2a;
+      border-color: #555;
+      color: #e0e0e0;
+    }
     /* Idle Miner-stijlen (multiple shafts) */
     #idleMinerSection {
       text-align: center;
@@ -414,7 +423,7 @@
         alert("Not enough coins to purchase a new shaft!");
       }
     });
-    // Auto-production: each shaft with a manager produces coins every second
+    // Auto-production: every second, each shaft with a manager produces coins
     setInterval(function() {
       idleData.shafts.forEach(shaft => {
         if (shaft.managerHired) {
@@ -516,8 +525,8 @@
       }
     }
     let plinkoBalls = [];
-    // To slow down the fall, use very low gravity and initial velocities:
-    const gravity = 0.03; // lower gravity so balls fall more slowly
+    // Use a lower gravity so balls fall very slowly
+    const gravity = 0.01;  // decreased from 0.03 to 0.01
     function updatePlinko() {
       plinkoCtx.clearRect(0, 0, plinkoWidth, plinkoHeight);
       // Draw bins
@@ -541,11 +550,11 @@
         const ball = plinkoBalls[b];
         // Apply very low gravity so the ball falls slowly
         ball.vy += gravity;
-        // Add a bit of horizontal noise – increase its range to allow more drift
+        // Add a bit more horizontal noise to allow reaching outer bins
         ball.vx += (Math.random() - 0.5) * 0.2;
         ball.x += ball.vx;
         ball.y += ball.vy;
-        // Allow the ball to bounce slightly off the walls without too much damping:
+        // Limit horizontal speed near edges
         if (ball.x < ball.r + 10) {
           ball.vx = Math.abs(ball.vx) * 0.8;
         }
@@ -555,21 +564,19 @@
         if (ball.x < ball.r || ball.x > plinkoWidth - ball.r) {
           ball.vx *= -1;
         }
-        // Collisions with pegs:
+        // Collisions with pegs: reflect and add some randomness
         plinkoPegs.forEach(peg => {
           let dx = ball.x - peg.x;
           let dy = ball.y - peg.y;
           let dist = Math.sqrt(dx * dx + dy * dy);
           let minDist = ball.r + peg.r;
           if (dist < minDist && dist > 0) {
-            // Instead of reflecting strictly off the peg, add a random horizontal push
             let nx = dx / dist;
             let ny = dy / dist;
             let overlap = minDist - dist;
             ball.x += nx * overlap;
             ball.y += ny * overlap;
-            ball.vx += (Math.random() - 0.5) * 0.3;  // increased randomness
-            // Let the vertical velocity mostly remain intact
+            ball.vx += (Math.random() - 0.5) * 0.3;
             ball.vy *= 0.995;
           }
         });
@@ -578,7 +585,7 @@
         plinkoCtx.beginPath();
         plinkoCtx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
         plinkoCtx.fill();
-        // When ball reaches bottom, determine bin and award coins
+        // If ball reaches bottom, determine bin and award coins
         if (ball.y + ball.r > plinkoHeight - 30) {
           let binIndex = Math.floor(ball.x / binWidth);
           if (binIndex < 0) binIndex = 0;
@@ -606,7 +613,7 @@
       idleData.coins -= bet;
       updateIdleDisplay();
       saveIdleData();
-      // Use a slightly larger initial horizontal velocity range so the ball can reach outer bins
+      // Use a wider initial horizontal speed range to allow reaching outer bins
       let ball = {
         x: plinkoWidth / 2 + (Math.random() - 0.5) * 20,
         y: 20,
@@ -624,7 +631,7 @@
     });
     updatePlinko();
     /*******************************
-     * SLOT MACHINE GAME – PREVENT DOUBLE SPIN
+     * SLOT MACHINE – PREVENT DOUBLE SPIN
      *******************************/
     const slotSymbols = ["🍒", "🍋", "🔔", "⭐", "7️⃣", "🍀"];
     let slotSpinning = false;
@@ -645,7 +652,7 @@
       });
     }
     document.getElementById('spinSlotButton').addEventListener('click', async function() {
-      if (slotSpinning) return;  // Prevent multiple spins at once
+      if (slotSpinning) return;  // Prevent multiple spins
       slotSpinning = true;
       let bet = parseFloat(document.getElementById('betAmount').value);
       if (isNaN(bet) || bet <= 0) {
