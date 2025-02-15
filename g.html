@@ -268,7 +268,7 @@
         <button id="resetHLButton" style="background:#cc0000;">Reset</button>
       </div>
     </div>
-    <!-- Plinko Section (Old Plinko) -->
+    <!-- Plinko Section (Old Custom Plinko) -->
     <div id="plinkoSection" class="game-section">
       <h2>Plinko</h2>
       <div style="text-align:center; margin-bottom:10px;">
@@ -497,7 +497,7 @@
     });
     startHLGame();
     /*******************************
-     * PLINKO GAME – OLD VERSION
+     * PLINKO GAME – OLD VERSION (Custom Simulation)
      *******************************/
     const plinkoCanvas = document.getElementById('plinkoCanvas');
     const plinkoCtx = plinkoCanvas.getContext('2d');
@@ -507,7 +507,7 @@
     const binCount = 9;
     const binMultipliers = [10, 2, 1, 0.5, 0.2, 0.5, 1, 2, 10];
     const binWidth = plinkoWidth / binCount;
-    // Generate pegs – use 10 rows for a binomial outcome
+    // Generate pegs – using 10 rows for a realistic binomial outcome
     const plinkoPegs = [];
     const pegRows = 10;
     const pegSpacingX = plinkoWidth / 10;
@@ -548,8 +548,8 @@
       // Update and draw balls
       for (let b = plinkoBalls.length - 1; b >= 0; b--) {
         const ball = plinkoBalls[b];
-        ball.vy += gravity;  // very low gravity
-        // Add some horizontal noise (increased range to allow outer bin reach)
+        ball.vy += gravity;  // apply low gravity
+        // Add some horizontal noise to allow outer bin reach
         ball.vx += (Math.random() - 0.5) * 0.2;
         ball.x += ball.vx;
         ball.y += ball.vy;
@@ -612,7 +612,7 @@
       idleData.coins -= bet;
       updateIdleDisplay();
       saveIdleData();
-      // Use a wider initial horizontal speed so balls can reach outer bins
+      // Use a wider initial horizontal speed range to allow reaching outer bins
       let ball = {
         x: plinkoWidth / 2 + (Math.random() - 0.5) * 20,
         y: 20,
