@@ -2,263 +2,675 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
-  <title>Plinko Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Game Center</title>
   <style>
+    /* CSS-variabelen voor light mode */
+    :root {
+      --bg-light: #f0f0f0;
+      --text-light: #333;
+      --container-light: #fff;
+      --nav-light: #3367D6;
+      --button-light: #4285F4;
+      --button-hover-light: #3367D6;
+    }
+    /* Globale stijlen */
     body {
-      font-family: sans-serif;
-      text-align: center;
-      background: #f0f0f0;
       margin: 0;
-      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg-light);
+      color: var(--text-light);
+      transition: background 0.3s, color 0.3s;
     }
-    h1 {
-      margin-top: 20px;
+    nav {
+      background: var(--nav-light);
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
     }
-    #gameCanvas {
-      background: #fff;
-      border: 2px solid #000;
-      display: block;
-      margin: 20px auto;
-    }
-    #controls {
-      margin-bottom: 20px;
-    }
-    button {
-      font-size: 16px;
-      padding: 10px 20px;
+    nav a {
+      color: #fff;
+      text-decoration: none;
+      padding: 12px 20px;
       margin: 5px;
-      cursor: pointer;
+      border-radius: 5px;
+      background: var(--button-light);
+      transition: background 0.3s;
     }
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    nav a:hover {
+      background: var(--button-hover-light);
+    }
+    .container {
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 20px;
+      background: var(--container-light);
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      transition: background 0.3s;
+    }
+    .game-section { display: none; }
+    .game-section.active { display: block; }
+    button {
+      padding: 10px 15px;
+      margin: 10px 5px;
+      border: none;
+      border-radius: 5px;
+      background: var(--button-light);
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover { background: var(--button-hover-light); }
+    input[type="number"] {
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      width: 60px;
+    }
+    @media (max-width: 768px) {
+      .container { margin: 10px; padding: 15px; }
+      nav { flex-direction: column; }
+    }
+    /* Dark mode-stijlen */
+    body.dark {
+      background: #121212;
+      color: #e0e0e0;
+    }
+    body.dark .container {
+      background: #1e1e1e;
+      box-shadow: 0 0 10px rgba(255,255,255,0.1);
+    }
+    body.dark nav {
+      background: #333;
+    }
+    body.dark nav a {
+      background: #444;
+      color: #e0e0e0;
+    }
+    body.dark nav a:hover {
+      background: #555;
+    }
+    body.dark #plinkoCanvas,
+    body.dark .reel {
+      border-color: #444;
+      background: #333;
+    }
+    /* Idle Miner-stijlen (meerdere shafts) */
+    #idleMinerSection {
+      text-align: center;
+    }
+    #coinsDisplay {
+      font-size: 1.5em;
+      margin-bottom: 10px;
+    }
+    #shaftsContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    .shaft {
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      background: #eee;
+      padding: 10px;
+      width: 300px;
+      margin: 0 auto;
+      text-align: left;
+      transition: all 0.5s ease;
+    }
+    .shaft h3 {
+      margin: 0 0 10px;
+    }
+    .shaft button {
+      font-size: 0.9em;
+      padding: 5px 10px;
+      margin: 3px 0;
+    }
+    /* Purchase new shaft button */
+    #purchaseShaftButton {
+      font-size: 1em;
+    }
+    /* Higher/Lower-stijlen */
+    #hlCardsContainer {
+      position: relative;
+      width: 150px;
+      margin: 0 auto 10px;
+      height: 200px;
+    }
+    #hlCurrentCard {
+      width: 150px;
+      height: 200px;
+      background: #fff;
+      border: 4px solid var(--button-light);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3em;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      perspective: 1000px;
+    }
+    #hlCurrentCard.flip {
+      animation: flipCard 0.6s forwards;
+    }
+    @keyframes flipCard {
+      0% { transform: translateX(-50%) rotateY(0deg); }
+      50% { transform: translateX(-50%) rotateY(90deg); }
+      100% { transform: translateX(-50%) rotateY(0deg); }
+    }
+    #hlPrevCard {
+      width: 100px;
+      height: 130px;
+      background: #fff;
+      border: 2px solid var(--button-light);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      position: absolute;
+      left: -110px;
+      top: 35px;
+    }
+    #hlButtons {
+      text-align: center;
+      margin-top: 10px;
+    }
+    #hlButtons button {
+      font-size: 1.5em;
+      padding: 15px 20px;
+    }
+    /* Plinko-stijlen */
+    #plinkoCanvas {
+      border: 2px solid var(--button-light);
+      border-radius: 10px;
+      background: #fafafa;
+      display: block;
+      margin: 10px auto;
+    }
+    /* Slot Machine-stijlen */
+    .reel {
+      width: 80px;
+      height: 80px;
+      border: 2px solid var(--button-light);
+      border-radius: 10px;
+      margin: 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fafafa;
+    }
+    .reel-emoji {
+      font-size: 3em;
+    }
+    .spinning {
+      animation: spinAnimation 0.5s linear infinite;
+    }
+    @keyframes spinAnimation {
+      from { transform: rotateX(0deg); }
+      to { transform: rotateX(360deg); }
     }
   </style>
 </head>
 <body>
-  <h1>Plinko Game</h1>
-  <div id="status">
-    <p id="pointsDisplay">Punten: 0</p>
-    <p id="multiplierDisplay">Multiplier: 1x</p>
-    <p id="upgradeCostDisplay">Volgende upgrade kost: 100 punten</p>
+  <nav>
+    <a href="#" data-target="idleMinerSection">Idle Miner</a>
+    <a href="#" data-target="higherLowerSection">Higher/Lower</a>
+    <a href="#" data-target="plinkoSection">Plinko</a>
+    <a href="#" data-target="slotMachineSection">Slot Machine</a>
+    <a href="#" id="toggleDarkMode">Toggle Dark Mode</a>
+  </nav>
+  <div class="container">
+    <!-- Idle Miner Section -->
+    <div id="idleMinerSection" class="game-section active">
+      <h2>Idle Miner</h2>
+      <div id="coinsDisplay">Coins: <span id="idleCoins">0</span></div>
+      <div id="shaftsContainer">
+        <!-- Shaft panels will be rendered here -->
+      </div>
+      <div style="margin-top:10px;">
+        <button id="purchaseShaftButton">
+          Purchase New Shaft (Cost: <span id="newShaftCost">500</span> coins)
+        </button>
+      </div>
+    </div>
+    <!-- Higher/Lower Section -->
+    <div id="higherLowerSection" class="game-section">
+      <h2>Higher/Lower</h2>
+      <div id="hlCardsContainer">
+        <div id="hlPrevCard">N/A</div>
+        <div id="hlCurrentCard">0</div>
+      </div>
+      <div style="text-align:center; margin-top:10px;">
+        Score: <span id="hlScore">0</span>
+      </div>
+      <div id="hlButtons">
+        <button id="higherButton">▲</button>
+        <button id="lowerButton">▼</button>
+        <button id="resetHLButton" style="background:#cc0000;">Reset</button>
+      </div>
+    </div>
+    <!-- Plinko Section -->
+    <div id="plinkoSection" class="game-section">
+      <h2>Plinko</h2>
+      <div style="text-align:center; margin-bottom:10px;">
+        Balance: <span id="globalBalancePlinko">0</span>
+      </div>
+      <div style="text-align:center; margin-bottom:10px;">
+        <label for="plinkoBet">Bet Amount:</label>
+        <input type="number" id="plinkoBet" value="10" min="1">
+      </div>
+      <canvas id="plinkoCanvas" width="400" height="600"></canvas>
+      <div style="text-align:center; margin-top:10px;">
+        <button id="dropBallButton">Drop Ball</button>
+        <button id="resetPlinkoButton" style="background:#cc0000;">Reset</button>
+      </div>
+    </div>
+    <!-- Slot Machine Section -->
+    <div id="slotMachineSection" class="game-section">
+      <h2>Slot Machine</h2>
+      <div style="text-align:center; margin-bottom:10px;">
+        Balance: <span id="globalBalanceSlot">0</span>
+      </div>
+      <div style="text-align:center; margin-bottom:10px;">
+        <label for="betAmount">Bet Amount:</label>
+        <input type="number" id="betAmount" value="10" min="1">
+      </div>
+      <div id="slotMachine" style="display:flex; justify-content:center; margin-bottom:10px;">
+        <div class="reel" id="reel1"><span class="reel-emoji">🍒</span></div>
+        <div class="reel" id="reel2"><span class="reel-emoji">🍒</span></div>
+        <div class="reel" id="reel3"><span class="reel-emoji">🍒</span></div>
+      </div>
+      <div style="text-align:center;">
+        <button id="spinSlotButton">Spin</button>
+      </div>
+      <div id="slotResult" style="text-align:center; margin-top:10px;"></div>
+    </div>
   </div>
-  <canvas id="gameCanvas" width="600" height="800"></canvas>
-  <div id="controls">
-    <button id="dropButton">Laat de bal vallen</button>
-    <button id="upgradeButton">Koop multiplier upgrade</button>
-  </div>
-
   <script>
-    // Haal referenties op
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const dropButton = document.getElementById("dropButton");
-    const upgradeButton = document.getElementById("upgradeButton");
-    const pointsDisplay = document.getElementById("pointsDisplay");
-    const multiplierDisplay = document.getElementById("multiplierDisplay");
-    const upgradeCostDisplay = document.getElementById("upgradeCostDisplay");
-
-    // Spelparameters
-    const numRows = 10;      // aantal rijen waarlangs de bal valt
-    const numBins = 11;      // aantal bins onderaan (indices 0 t/m 10)
-    const pegRadius = 5;     // straal van de getekende “pegs”
-    const ballRadius = 10;   // straal van de bal
-
-    // Voor consistente berekeningen van posities:
-    const pegSpacingY = canvas.height / (numRows + 2);          // verticale afstand
-    const binSpacingX = canvas.width / (numBins + 1);             // horizontale afstand
-
-    // Basisbeloningen per bin (symmetrisch, hoogste beloning in het midden)
-    const baseRewards = [1, 2, 5, 10, 20, 50, 20, 10, 5, 2, 1];
-
-    // Spelstatus (wordt opgeslagen via localStorage)
-    let punten = 0;
-    let multiplierLevel = 1;  // Dit bepaalt de winstvermenigvuldiger (1x, 2x, …)
-    let isAnimating = false;  // Om dubbele clicks tijdens animatie te voorkomen
-
-    // Laad spelstatus uit localStorage (indien aanwezig)
-    function loadGame() {
-      const savedState = localStorage.getItem("plinkoGame");
-      if (savedState) {
-        try {
-          const state = JSON.parse(savedState);
-          punten = state.punten || 0;
-          multiplierLevel = state.multiplierLevel || 1;
-        } catch (e) {
-          console.error("Fout bij laden game state:", e);
+    /*******************************
+     * Global Balance Updates
+     *******************************/
+    function updateGlobalBalanceDisplays() {
+      document.getElementById('globalBalancePlinko').innerText = idleData.coins.toFixed(1);
+      document.getElementById('globalBalanceSlot').innerText = idleData.coins.toFixed(1);
+    }
+    /*******************************
+     * Navigation & Dark Mode
+     *******************************/
+    document.querySelectorAll('nav a[data-target]').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = this.getAttribute('data-target');
+        document.querySelectorAll('.game-section').forEach(section => section.classList.remove('active'));
+        document.getElementById(target).classList.add('active');
+      });
+    });
+    document.getElementById('toggleDarkMode').addEventListener('click', function(e) {
+      e.preventDefault();
+      document.body.classList.toggle('dark');
+      localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+    });
+    if(localStorage.getItem('darkMode') === 'true'){
+      document.body.classList.add('dark');
+    }
+    /*******************************
+     * Idle Miner – Multiple Shafts
+     *******************************/
+    let idleData = {
+      coins: 0,
+      shafts: [
+        { level: 1, baseProduction: 10, upgradeCost: 50, managerHired: false, managerCost: 200 }
+      ],
+      newShaftCost: 500
+    };
+    function saveIdleData() {
+      localStorage.setItem('idleData', JSON.stringify(idleData));
+    }
+    function loadIdleData() {
+      const saved = localStorage.getItem('idleData');
+      if (saved) idleData = JSON.parse(saved);
+      updateIdleDisplay();
+    }
+    function updateIdleDisplay() {
+      document.getElementById('idleCoins').innerText = idleData.coins.toFixed(1);
+      document.getElementById('newShaftCost').innerText = Math.floor(idleData.newShaftCost);
+      updateGlobalBalanceDisplays();
+      renderShafts();
+    }
+    function renderShafts() {
+      const container = document.getElementById('shaftsContainer');
+      container.innerHTML = '';
+      idleData.shafts.forEach((shaft, index) => {
+        let manualValue = shaft.level * shaft.baseProduction;
+        let autoValue = shaft.managerHired ? manualValue * 2 : 0;
+        const div = document.createElement('div');
+        div.className = 'shaft';
+        div.innerHTML = `
+          <h3>Shaft #${index+1}</h3>
+          <div>Level: ${shaft.level}</div>
+          <div>Manual Mine: ${manualValue} coins</div>
+          <div>Auto Production: ${autoValue} coins/sec</div>
+          <div>Upgrade Cost: ${Math.floor(shaft.upgradeCost)} coins</div>
+          <div>Manager: ${shaft.managerHired ? 'Hired' : 'Not Hired (Cost: ' + shaft.managerCost + ')'}</div>
+          <div style="margin-top:5px;">
+            <button onclick="manualMine(${index})">Mine Manually</button>
+            <button onclick="upgradeShaft(${index})">Upgrade Shaft</button>
+            <button onclick="hireManager(${index})">Hire Manager</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+    function manualMine(index) {
+      let shaft = idleData.shafts[index];
+      let amount = shaft.level * shaft.baseProduction;
+      idleData.coins += amount;
+      updateIdleDisplay();
+      saveIdleData();
+    }
+    function upgradeShaft(index) {
+      let shaft = idleData.shafts[index];
+      if (idleData.coins >= shaft.upgradeCost) {
+        idleData.coins -= shaft.upgradeCost;
+        shaft.level++;
+        shaft.upgradeCost *= 1.5;
+        updateIdleDisplay();
+        saveIdleData();
+      } else {
+        alert("Not enough coins to upgrade this shaft!");
+      }
+    }
+    function hireManager(index) {
+      let shaft = idleData.shafts[index];
+      if (!shaft.managerHired && idleData.coins >= shaft.managerCost) {
+        idleData.coins -= shaft.managerCost;
+        shaft.managerHired = true;
+        updateIdleDisplay();
+        saveIdleData();
+      } else if (shaft.managerHired) {
+        alert("Manager already hired for this shaft!");
+      } else {
+        alert("Not enough coins to hire manager!");
+      }
+    }
+    document.getElementById('purchaseShaftButton').addEventListener('click', function() {
+      if (idleData.coins >= idleData.newShaftCost) {
+        idleData.coins -= idleData.newShaftCost;
+        idleData.shafts.push({ level: 1, baseProduction: 10, upgradeCost: 50, managerHired: false, managerCost: 200 });
+        idleData.newShaftCost *= 1.5;
+        updateIdleDisplay();
+        saveIdleData();
+      } else {
+        alert("Not enough coins to purchase a new shaft!");
+      }
+    });
+    // Auto production: every second, each shaft with a manager produces coins
+    setInterval(function() {
+      idleData.shafts.forEach(shaft => {
+        if (shaft.managerHired) {
+          let prod = shaft.level * shaft.baseProduction * 2;
+          idleData.coins += prod;
+        }
+      });
+      updateIdleDisplay();
+      saveIdleData();
+    }, 1000);
+    loadIdleData();
+    /*******************************
+     * Higher/Lower Game (ongewijzigd)
+     *******************************/
+    let hlData = {
+      currentNumber: 0,
+      score: 0,
+      prevNumber: null
+    };
+    function startHLGame() {
+      hlData.currentNumber = Math.floor(Math.random() * 100) + 1;
+      hlData.score = 0;
+      hlData.prevNumber = null;
+      updateHLDisplay();
+    }
+    function updateHLDisplay() {
+      document.getElementById('hlCurrentCard').innerText = hlData.currentNumber;
+      document.getElementById('hlPrevCard').innerText = hlData.prevNumber !== null ? hlData.prevNumber : "N/A";
+      document.getElementById('hlScore').innerText = hlData.score;
+    }
+    function flipHLCard(newNumber) {
+      const card = document.getElementById('hlCurrentCard');
+      card.classList.add('flip');
+      setTimeout(() => {
+        card.innerText = newNumber;
+        card.classList.remove('flip');
+      }, 600);
+    }
+    document.getElementById('higherButton').addEventListener('click', function() {
+      let next = Math.floor(Math.random() * 100) + 1;
+      if (next > hlData.currentNumber) {
+        hlData.score++;
+        hlData.prevNumber = hlData.currentNumber;
+        flipHLCard(next);
+        hlData.currentNumber = next;
+      } else {
+        alert("Wrong! Game Over. Score: " + hlData.score);
+        startHLGame();
+        return;
+      }
+      updateHLDisplay();
+    });
+    document.getElementById('lowerButton').addEventListener('click', function() {
+      let next = Math.floor(Math.random() * 100) + 1;
+      if (next < hlData.currentNumber) {
+        hlData.score++;
+        hlData.prevNumber = hlData.currentNumber;
+        flipHLCard(next);
+        hlData.currentNumber = next;
+      } else {
+        alert("Wrong! Game Over. Score: " + hlData.score);
+        startHLGame();
+        return;
+      }
+      updateHLDisplay();
+    });
+    document.getElementById('resetHLButton').addEventListener('click', function() {
+      if (confirm("Reset Higher/Lower?")) {
+        startHLGame();
+      }
+    });
+    startHLGame();
+    /*******************************
+     * Plinko Game (remade for real-like behavior)
+     *******************************/
+    const plinkoCanvas = document.getElementById('plinkoCanvas');
+    const plinkoCtx = plinkoCanvas.getContext('2d');
+    const plinkoWidth = plinkoCanvas.width;
+    const plinkoHeight = plinkoCanvas.height;
+    // 9 bins with multipliers: center bins (low multipliers) are more likely.
+    const binCount = 9;
+    const binMultipliers = [10, 2, 1, 0.5, 0.2, 0.5, 1, 2, 10];
+    const binWidth = plinkoWidth / binCount;
+    // Generate pegs – use 10 rows for more coin toss decisions
+    const plinkoPegs = [];
+    const pegRows = 10;
+    const pegSpacingX = plinkoWidth / 10;
+    const pegSpacingY = 60;
+    const pegRadius = 5;
+    for (let row = 0; row < pegRows; row++) {
+      let offset = (row % 2 === 0) ? pegSpacingX / 2 : 0;
+      let numPegs = Math.floor(plinkoWidth / pegSpacingX);
+      for (let i = 0; i < numPegs; i++) {
+        plinkoPegs.push({
+          x: offset + i * pegSpacingX,
+          y: 50 + row * pegSpacingY,
+          r: pegRadius
+        });
+      }
+    }
+    let plinkoBalls = [];
+    function updatePlinko() {
+      plinkoCtx.clearRect(0, 0, plinkoWidth, plinkoHeight);
+      // Draw bins
+      for (let i = 0; i < binCount; i++) {
+        plinkoCtx.fillStyle = "#ddd";
+        plinkoCtx.fillRect(i * binWidth, plinkoHeight - 30, binWidth, 30);
+        plinkoCtx.fillStyle = "#333";
+        plinkoCtx.font = "14px sans-serif";
+        plinkoCtx.textAlign = "center";
+        plinkoCtx.fillText(binMultipliers[i] + "x", i * binWidth + binWidth / 2, plinkoHeight - 10);
+      }
+      // Draw pegs
+      plinkoCtx.fillStyle = "#007acc";
+      plinkoPegs.forEach(peg => {
+        plinkoCtx.beginPath();
+        plinkoCtx.arc(peg.x, peg.y, peg.r, 0, Math.PI * 2);
+        plinkoCtx.fill();
+      });
+      // Update and draw balls
+      for (let b = plinkoBalls.length - 1; b >= 0; b--) {
+        const ball = plinkoBalls[b];
+        // Use low gravity so the ball falls slowly
+        ball.vy += 0.1;
+        // Add a small horizontal noise
+        ball.vx += (Math.random() - 0.5) * 0.05;
+        ball.x += ball.vx;
+        ball.y += ball.vy;
+        // Limit horizontal speed near the edges
+        if (ball.x < ball.r + 20) {
+          ball.vx = Math.abs(ball.vx) * 0.5;
+        }
+        if (ball.x > plinkoWidth - ball.r - 20) {
+          ball.vx = -Math.abs(ball.vx) * 0.5;
+        }
+        // Bounce off walls
+        if (ball.x < ball.r || ball.x > plinkoWidth - ball.r) {
+          ball.vx *= -1;
+        }
+        // Collisions with pegs: reflect the ball with a slight random horizontal push
+        plinkoPegs.forEach(peg => {
+          let dx = ball.x - peg.x;
+          let dy = ball.y - peg.y;
+          let dist = Math.sqrt(dx * dx + dy * dy);
+          let minDist = ball.r + peg.r;
+          if (dist < minDist && dist > 0) {
+            let nx = dx / dist;
+            let ny = dy / dist;
+            let overlap = minDist - dist;
+            ball.x += nx * overlap;
+            ball.y += ny * overlap;
+            // Add a modest horizontal deflection
+            ball.vx += (Math.random() - 0.5) * 0.2;
+            // Preserve most of the vertical velocity
+            ball.vy *= 0.99;
+          }
+        });
+        // Draw the ball
+        plinkoCtx.fillStyle = "#e67e22";
+        plinkoCtx.beginPath();
+        plinkoCtx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+        plinkoCtx.fill();
+        // If the ball reaches the bottom, determine the bin and award coins
+        if (ball.y + ball.r > plinkoHeight - 30) {
+          let binIndex = Math.floor(ball.x / binWidth);
+          if (binIndex < 0) binIndex = 0;
+          if (binIndex >= binCount) binIndex = binCount - 1;
+          let multiplier = binMultipliers[binIndex];
+          let winnings = ball.bet * multiplier;
+          idleData.coins += winnings;
+          updateIdleDisplay();
+          saveIdleData();
+          plinkoBalls.splice(b, 1);
         }
       }
-      updateStatusDisplay();
+      requestAnimationFrame(updatePlinko);
     }
-
-    // Sla spelstatus op in localStorage
-    function saveGame() {
-      const state = {
-        punten: punten,
-        multiplierLevel: multiplierLevel
+    document.getElementById('dropBallButton').addEventListener('click', function() {
+      let bet = parseFloat(document.getElementById('plinkoBet').value);
+      if (isNaN(bet) || bet <= 0) {
+        alert("Enter a valid bet.");
+        return;
+      }
+      if (idleData.coins < bet) {
+        alert("Not enough coins!");
+        return;
+      }
+      idleData.coins -= bet;
+      updateIdleDisplay();
+      saveIdleData();
+      // Set low initial speeds so the ball falls slowly
+      let ball = {
+        x: plinkoWidth / 2 + (Math.random() - 0.5) * 10,
+        y: 20,
+        r: 8,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: 0,
+        bet: bet
       };
-      localStorage.setItem("plinkoGame", JSON.stringify(state));
-    }
-
-    // Werk de tekstvelden bij
-    function updateStatusDisplay() {
-      pointsDisplay.textContent = "Punten: " + punten;
-      multiplierDisplay.textContent = "Multiplier: " + multiplierLevel + "x";
-      let upgradeCost = multiplierLevel * 100;
-      upgradeCostDisplay.textContent = "Volgende upgrade kost: " + upgradeCost + " punten";
-      // Upgradebutton alleen actief als je genoeg punten hebt
-      upgradeButton.disabled = (punten < upgradeCost);
-    }
-
-    // Simuleer een bal die valt
-    function dropBall() {
-      if (isAnimating) return;
-      isAnimating = true;
-      dropButton.disabled = true;
-      upgradeButton.disabled = true;
-
-      // Simuleer de baan: begin in de middelste bin (index 5)
-      let path = [];
-      let currentBin = Math.floor(numBins / 2); // 11 bins => midden is index 5
-      path.push(currentBin);
-      // Voor elke rij: beweeg willekeurig links (-1) of rechts (+1)
-      for (let i = 0; i < numRows; i++) {
-        let move;
-        if (currentBin === 0) {
-          move = 1;
-        } else if (currentBin === numBins - 1) {
-          move = -1;
-        } else {
-          move = Math.random() < 0.5 ? -1 : 1;
-        }
-        currentBin += move;
-        path.push(currentBin);
+      plinkoBalls.push(ball);
+    });
+    document.getElementById('resetPlinkoButton').addEventListener('click', function() {
+      if (confirm("Reset Plinko?")) {
+        alert("Plinko has been reset.");
       }
-      // De uiteindelijke bin bepaalt de basisbeloning
-      let finalBin = path[path.length - 1];
-      let baseReward = baseRewards[finalBin];
-      let winAmount = baseReward * multiplierLevel;
-
-      // Start de animatie waarin de bal langs de berekende weg beweegt
-      animateBallPath(path, winAmount);
+    });
+    updatePlinko();
+    /*******************************
+     * Slot Machine Game (unchanged)
+     *******************************/
+    const slotSymbols = ["🍒", "🍋", "🔔", "⭐", "7️⃣", "🍀"];
+    function spinReel(reelElement, duration) {
+      return new Promise(resolve => {
+        const emojiElement = reelElement.querySelector('.reel-emoji');
+        emojiElement.classList.add("spinning");
+        let interval = setInterval(() => {
+          emojiElement.innerText = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+        }, 100);
+        setTimeout(() => {
+          clearInterval(interval);
+          emojiElement.classList.remove("spinning");
+          let finalSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+          emojiElement.innerText = finalSymbol;
+          resolve(finalSymbol);
+        }, duration);
+      });
     }
-
-    // Animeer de bal langs de berekende weg
-    function animateBallPath(path, winAmount) {
-      let frame = 0;
-      const framesPerSegment = 30; // aantal frames per “segment” (tussen twee rijen)
-      const totalSegments = path.length - 1;
-
-      function animate() {
-        // Maak canvas schoon en teken de achtergrond (het board)
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawBoard();
-
-        // Bepaal in welk segment we zitten
-        let segment = Math.floor(frame / framesPerSegment);
-        let progress = (frame % framesPerSegment) / framesPerSegment;
-
-        // Zorg dat bij het laatste segment progress = 1 is
-        if (segment >= totalSegments) {
-          segment = totalSegments - 1;
-          progress = 1;
-        }
-
-        // Start- en eindpositie (in de horizontale richting) van dit segment
-        let startBin = path[segment];
-        let endBin = path[segment + 1];
-        let startX = (startBin + 1) * binSpacingX;
-        let startY = (segment + 1) * pegSpacingY;
-        let endX = (endBin + 1) * binSpacingX;
-        let endY = (segment + 2) * pegSpacingY;
-
-        // Lineaire interpolatie van positie
-        let ballX = startX + (endX - startX) * progress;
-        let ballY = startY + (endY - startY) * progress;
-
-        // Teken de bal
-        ctx.beginPath();
-        ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
-        ctx.fillStyle = "#FF0000";
-        ctx.fill();
-        ctx.closePath();
-
-        frame++;
-        if (frame < totalSegments * framesPerSegment) {
-          requestAnimationFrame(animate);
-        } else {
-          // Animatie afgerond: update punten en meld resultaat
-          punten += winAmount;
-          setTimeout(function() {
-            alert("Je hebt " + winAmount + " punten gewonnen!");
-            isAnimating = false;
-            dropButton.disabled = false;
-            updateStatusDisplay();
-            saveGame();
-          }, 100);
-        }
+    document.getElementById('spinSlotButton').addEventListener('click', async function() {
+      let bet = parseFloat(document.getElementById('betAmount').value);
+      if (isNaN(bet) || bet <= 0) {
+        alert("Enter a valid bet.");
+        return;
       }
-      animate();
-    }
-
-    // Teken het plinko‑bord: pegs en bins
-    function drawBoard() {
-      // Eerst de pegs
-      for (let row = 0; row < numRows; row++) {
-        // Voor afwisseling: in even rijen geen offset, in oneven rijen een kleine offset
-        let offset = (row % 2) * (binSpacingX / 2);
-        // Bepaal het aantal pegs in deze rij
-        // Voor een nette opmaak kun je het aantal pegs in oneven rijen één minder maken
-        let pegsInRow = row % 2 === 0 ? numBins : numBins - 1;
-        let y = (row + 1) * pegSpacingY;
-        for (let col = 0; col < pegsInRow; col++) {
-          let x = offset + (col + 1) * binSpacingX;
-          ctx.beginPath();
-          ctx.arc(x, y, pegRadius, 0, Math.PI * 2);
-          ctx.fillStyle = "#000";
-          ctx.fill();
-          ctx.closePath();
-        }
+      if (idleData.coins < bet) {
+        alert("Not enough coins!");
+        return;
       }
-
-      // Teken de bins onderaan
-      let binTop = (numRows + 1) * pegSpacingY;
-      for (let i = 0; i < numBins; i++) {
-        let binCenter = (i + 1) * binSpacingX;
-        let x = binCenter - binSpacingX / 2;
-        let y = binTop;
-        ctx.beginPath();
-        ctx.rect(x, y, binSpacingX, canvas.height - y);
-        ctx.strokeStyle = "#000";
-        ctx.stroke();
-        ctx.closePath();
-
-        // Teken de basisbeloning in het midden van de bin
-        ctx.fillStyle = "#000";
-        ctx.font = "16px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(baseRewards[i], binCenter, y + 20);
+      idleData.coins -= bet;
+      updateIdleDisplay();
+      saveIdleData();
+      document.getElementById('slotResult').innerText = "";
+      const reel1 = document.getElementById('reel1');
+      const reel2 = document.getElementById('reel2');
+      const reel3 = document.getElementById('reel3');
+      const symbol1 = await spinReel(reel1, 1200);
+      const symbol2 = await spinReel(reel2, 1600);
+      const symbol3 = await spinReel(reel3, 2000);
+      let winnings = 0;
+      if (symbol1 === symbol2 && symbol2 === symbol3) {
+        winnings = bet * 5;
+        document.getElementById('slotResult').innerText = "Jackpot! You win " + winnings + " coins!";
+      } else if (symbol1 === symbol2 || symbol1 === symbol3 || symbol2 === symbol3) {
+        winnings = bet * 2;
+        document.getElementById('slotResult').innerText = "You win " + winnings + " coins!";
+      } else {
+        document.getElementById('slotResult').innerText = "Sorry, you lose.";
       }
-    }
-
-    // Verhoog de multiplier als er genoeg punten zijn
-    function upgradeMultiplier() {
-      let upgradeCost = multiplierLevel * 100;
-      if (punten >= upgradeCost) {
-        punten -= upgradeCost;
-        multiplierLevel++;
-        updateStatusDisplay();
-        saveGame();
-      }
-    }
-
-    // Eventlisteners voor de knoppen
-    dropButton.addEventListener("click", dropBall);
-    upgradeButton.addEventListener("click", upgradeMultiplier);
-
-    // Bij het laden: teken het board en laad opgeslagen spelstatus
-    drawBoard();
-    loadGame();
+      idleData.coins += winnings;
+      updateIdleDisplay();
+      saveIdleData();
+    });
   </script>
 </body>
 </html>
