@@ -3,9 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Game Center</title>
+  <title>Games Hub</title>
+  <!-- Matter.js for Plinko physics -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
   <style>
-    /* CSS-variabelen voor light mode */
+    /* CSS Variables for Light Mode */
     :root {
       --bg-light: #f0f0f0;
       --text-light: #333;
@@ -14,7 +16,7 @@
       --button-light: #4285F4;
       --button-hover-light: #3367D6;
     }
-    /* Globale stijlen */
+    /* Global Styles */
     body {
       margin: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -78,7 +80,7 @@
       .container { margin: 10px; padding: 15px; }
       nav { flex-direction: column; }
     }
-    /* Dark mode-stijlen */
+    /* Dark Mode Styles */
     body.dark {
       background: #121212;
       color: #e0e0e0;
@@ -206,6 +208,18 @@
       display: block;
       margin: 10px auto;
     }
+    /* Roulette */
+    #rouletteCanvas {
+      border: 2px solid var(--button-light);
+      border-radius: 50%;
+      background: #fafafa;
+      display: block;
+      margin: 20px auto;
+    }
+    #rouletteResult {
+      font-size: 1.5em;
+      margin-top: 10px;
+    }
     /* Slot Machine */
     .reel {
       width: 80px;
@@ -236,6 +250,7 @@
     <a href="#" data-target="higherLowerSection">Higher/Lower</a>
     <a href="#" data-target="plinkoSection">Plinko</a>
     <a href="#" data-target="slotMachineSection">Slot Machine</a>
+    <a href="#" data-target="rouletteSection">Roulette</a>
     <a href="#" id="toggleDarkMode">Toggle Dark Mode</a>
   </nav>
   <div class="container">
@@ -268,7 +283,7 @@
         <button id="resetHLButton" style="background:#cc0000;">Reset</button>
       </div>
     </div>
-    <!-- Plinko Section (Old Custom Plinko) -->
+    <!-- Plinko Section -->
     <div id="plinkoSection" class="game-section">
       <h2>Plinko</h2>
       <div style="text-align:center; margin-bottom:10px;">
@@ -304,6 +319,15 @@
       </div>
       <div id="slotResult" style="text-align:center; margin-top:10px;"></div>
     </div>
+    <!-- Roulette Section -->
+    <div id="rouletteSection" class="game-section">
+      <h2>Roulette</h2>
+      <canvas id="rouletteCanvas" width="400" height="400"></canvas>
+      <div style="text-align:center; margin-top:10px;">
+        <button id="spinRouletteButton">Spin Roulette</button>
+      </div>
+      <div id="rouletteResult" style="text-align:center; margin-top:10px;"></div>
+    </div>
   </div>
   <script>
     /*******************************
@@ -312,6 +336,7 @@
     function updateGlobalBalanceDisplays() {
       document.getElementById('globalBalancePlinko').innerText = idleData.coins.toFixed(1);
       document.getElementById('globalBalanceSlot').innerText = idleData.coins.toFixed(1);
+      document.getElementById('rouletteResult').innerText = "Current Balance: " + idleData.coins.toFixed(1) + " coins";
     }
     /*******************************
      * NAVIGATION & DARK MODE
@@ -497,8 +522,9 @@
     });
     startHLGame();
     /*******************************
-     * PLINKO GAME – OLD VERSION (Custom Simulation)
+     * PLINKO GAME – REALISTIC (Custom Simulation with Matter.js-inspired parameters)
      *******************************/
+    // We'll use our old custom simulation here, updated with parameters for realism.
     const plinkoCanvas = document.getElementById('plinkoCanvas');
     const plinkoCtx = plinkoCanvas.getContext('2d');
     const plinkoWidth = plinkoCanvas.width;
@@ -507,7 +533,7 @@
     const binCount = 9;
     const binMultipliers = [10, 2, 1, 0.5, 0.2, 0.5, 1, 2, 10];
     const binWidth = plinkoWidth / binCount;
-    // Generate pegs – using 10 rows for a realistic binomial outcome
+    // Generate pegs – using 10 rows
     const plinkoPegs = [];
     const pegRows = 10;
     const pegSpacingX = plinkoWidth / 10;
@@ -525,8 +551,8 @@
       }
     }
     let plinkoBalls = [];
-    // Use very low gravity so balls fall slowly
-    const gravity = 0.01;
+    // Lower gravity so balls fall very slowly
+    const gravity = 0.005;  // further lowered for realism
     function updatePlinko() {
       plinkoCtx.clearRect(0, 0, plinkoWidth, plinkoHeight);
       // Draw bins
@@ -548,9 +574,9 @@
       // Update and draw balls
       for (let b = plinkoBalls.length - 1; b >= 0; b--) {
         const ball = plinkoBalls[b];
-        ball.vy += gravity;  // apply low gravity
-        // Add some horizontal noise to allow outer bin reach
-        ball.vx += (Math.random() - 0.5) * 0.2;
+        ball.vy += gravity;  // apply very low gravity
+        // Add horizontal noise (increased range to allow outer bin reach)
+        ball.vx += (Math.random() - 0.5) * 0.3;
         ball.x += ball.vx;
         ball.y += ball.vy;
         // Constrain horizontal speed near edges
@@ -575,7 +601,7 @@
             let overlap = minDist - dist;
             ball.x += nx * overlap;
             ball.y += ny * overlap;
-            ball.vx += (Math.random() - 0.5) * 0.3;
+            ball.vx += (Math.random() - 0.5) * 0.4;
             ball.vy *= 0.995;
           }
         });
@@ -612,7 +638,7 @@
       idleData.coins -= bet;
       updateIdleDisplay();
       saveIdleData();
-      // Use a wider initial horizontal speed range to allow reaching outer bins
+      // Use a wider initial horizontal speed range so balls can reach outer bins
       let ball = {
         x: plinkoWidth / 2 + (Math.random() - 0.5) * 20,
         y: 20,
@@ -651,7 +677,7 @@
       });
     }
     document.getElementById('spinSlotButton').addEventListener('click', async function() {
-      if (slotSpinning) return;  // Prevent multiple spins
+      if (slotSpinning) return;
       slotSpinning = true;
       let bet = parseFloat(document.getElementById('betAmount').value);
       if (isNaN(bet) || bet <= 0) {
@@ -689,6 +715,82 @@
       saveIdleData();
       slotSpinning = false;
     });
+    /*******************************
+     * ROULETTE GAME – REALISTIC
+     *******************************/
+    // We'll create a roulette wheel with 37 segments (European Roulette)
+    // 0 is green, then alternating red and black for 1-36.
+    const rouletteCanvas = document.getElementById('rouletteCanvas');
+    const rouletteCtx = rouletteCanvas.getContext('2d');
+    const rouletteRadius = Math.min(rouletteCanvas.width, rouletteCanvas.height) / 2 - 20;
+    let rouletteAngle = 0;
+    let rouletteAngularVelocity = 0;
+    let rouletteSpinning = false;
+    const rouletteSegments = [];
+    // Create segments: 0 (green), then 1-36 alternating red and black.
+    rouletteSegments.push({ number: 0, color: "#00a651" });
+    for (let i = 1; i <= 36; i++) {
+      rouletteSegments.push({ number: i, color: (i % 2 === 0) ? "#000" : "#d40000" });
+    }
+    function drawRoulette() {
+      rouletteCtx.clearRect(0, 0, rouletteCanvas.width, rouletteCanvas.height);
+      const cx = rouletteCanvas.width / 2;
+      const cy = rouletteCanvas.height / 2;
+      const segAngle = (2 * Math.PI) / rouletteSegments.length;
+      for (let i = 0; i < rouletteSegments.length; i++) {
+        const startAngle = rouletteAngle + i * segAngle;
+        rouletteCtx.beginPath();
+        rouletteCtx.moveTo(cx, cy);
+        rouletteCtx.arc(cx, cy, rouletteRadius, startAngle, startAngle + segAngle);
+        rouletteCtx.closePath();
+        rouletteCtx.fillStyle = rouletteSegments[i].color;
+        rouletteCtx.fill();
+        // Draw number
+        rouletteCtx.save();
+        rouletteCtx.translate(cx, cy);
+        rouletteCtx.rotate(startAngle + segAngle / 2);
+        rouletteCtx.textAlign = "right";
+        rouletteCtx.fillStyle = "#fff";
+        rouletteCtx.font = "bold 16px sans-serif";
+        rouletteCtx.fillText(rouletteSegments[i].number, rouletteRadius - 10, 8);
+        rouletteCtx.restore();
+      }
+      // Draw pointer
+      rouletteCtx.fillStyle = "#fff";
+      rouletteCtx.beginPath();
+      rouletteCtx.moveTo(cx, 10);
+      rouletteCtx.lineTo(cx - 10, 40);
+      rouletteCtx.lineTo(cx + 10, 40);
+      rouletteCtx.closePath();
+      rouletteCtx.fill();
+    }
+    function updateRoulette() {
+      if (rouletteSpinning) {
+        rouletteAngle += rouletteAngularVelocity;
+        rouletteAngularVelocity *= 0.98; // friction
+        if (rouletteAngularVelocity < 0.002) {
+          rouletteAngularVelocity = 0;
+          rouletteSpinning = false;
+          // Determine winning segment (pointer at top, 0 degrees)
+          let normalized = rouletteAngle % (2 * Math.PI);
+          if (normalized < 0) normalized += 2 * Math.PI;
+          let winningIndex = rouletteSegments.length - Math.floor((normalized / (2 * Math.PI)) * rouletteSegments.length) - 1;
+          winningIndex = winningIndex % rouletteSegments.length;
+          const result = rouletteSegments[winningIndex];
+          document.getElementById('rouletteResult').innerText = "Winning Number: " + result.number;
+          // Optionally, award coins based on bet (not implemented here)
+        }
+      }
+      drawRoulette();
+      requestAnimationFrame(updateRoulette);
+    }
+    document.getElementById('spinRouletteButton').addEventListener('click', function() {
+      if (rouletteSpinning) return;
+      rouletteAngularVelocity = Math.random() * 0.3 + 0.3;
+      rouletteSpinning = true;
+      document.getElementById('rouletteResult').innerText = "Spinning...";
+    });
+    updateRoulette();
   </script>
 </body>
 </html>
