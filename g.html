@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Games Hub</title>
-  <!-- No external libraries used -->
   <style>
     /* CSS-variabelen voor light mode */
     :root {
@@ -50,8 +49,12 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
       transition: background 0.3s;
     }
-    .game-section { display: none; }
-    .game-section.active { display: block; }
+    .game-section { 
+      display: none; 
+    }
+    .game-section.active { 
+      display: block; 
+    }
     button {
       padding: 10px 15px;
       margin: 10px 5px;
@@ -62,7 +65,9 @@
       cursor: pointer;
       transition: background 0.3s;
     }
-    button:hover { background: var(--button-hover-light); }
+    button:hover { 
+      background: var(--button-hover-light);
+    }
     input[type="number"], select {
       padding: 5px;
       border: 1px solid #ccc;
@@ -193,9 +198,7 @@
       margin: 20px auto;
     }
     #rouletteControls { text-align: center; margin-top: 10px; }
-    #rouletteControls input, #rouletteControls select {
-      margin: 5px;
-    }
+    #rouletteControls input, #rouletteControls select { margin: 5px; }
     #rouletteResult { font-size: 1.5em; margin-top: 10px; }
     /* Slot Machine */
     .reel {
@@ -325,607 +328,603 @@
     </div>
   </div>
   <script>
-    /*******************************
-     * GLOBAL BALANCE UPDATES
-     *******************************/
-    function updateGlobalBalanceDisplays() {
-      document.getElementById('globalBalancePlinko').innerText = idleData.coins.toFixed(1);
-      document.getElementById('globalBalanceSlot').innerText = idleData.coins.toFixed(1);
-    }
-    /*******************************
-     * NAVIGATION & DARK MODE
-     *******************************/
-    document.querySelectorAll('nav a[data-target]').forEach(link => {
-      link.addEventListener('click', function(e) {
+    document.addEventListener("DOMContentLoaded", function() {
+      /*******************************
+       * GLOBAL BALANCE UPDATES
+       *******************************/
+      function updateGlobalBalanceDisplays() {
+        document.getElementById('globalBalancePlinko').innerText = idleData.coins.toFixed(1);
+        document.getElementById('globalBalanceSlot').innerText = idleData.coins.toFixed(1);
+        document.getElementById('rouletteResult').innerText = "Current Balance: " + idleData.coins.toFixed(1) + " coins";
+      }
+      /*******************************
+       * NAVIGATION & DARK MODE
+       *******************************/
+      document.querySelectorAll('nav a[data-target]').forEach(link => {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          const target = this.getAttribute('data-target');
+          document.querySelectorAll('.game-section').forEach(section => section.classList.remove('active'));
+          document.getElementById(target).classList.add('active');
+        });
+      });
+      document.getElementById('toggleDarkMode').addEventListener('click', function(e) {
         e.preventDefault();
-        const target = this.getAttribute('data-target');
-        document.querySelectorAll('.game-section').forEach(section => section.classList.remove('active'));
-        document.getElementById(target).classList.add('active');
+        document.body.classList.toggle('dark');
+        localStorage.setItem('darkMode', document.body.classList.contains('dark'));
       });
-    });
-    document.getElementById('toggleDarkMode').addEventListener('click', function(e) {
-      e.preventDefault();
-      document.body.classList.toggle('dark');
-      localStorage.setItem('darkMode', document.body.classList.contains('dark'));
-    });
-    if (localStorage.getItem('darkMode') === 'true') {
-      document.body.classList.add('dark');
-    }
-    /*******************************
-     * OFFLINE EARNINGS FOR IDLE MINER
-     *******************************/
-    function processOfflineEarnings() {
-      const lastActive = localStorage.getItem('lastActive');
-      const now = Date.now();
-      if (lastActive) {
-        const diff = (now - Number(lastActive)) / 1000; // seconds offline
-        let offlineEarnings = 0;
-        idleData.shafts.forEach(shaft => {
-          if (shaft.managerHired) {
-            offlineEarnings += shaft.level * shaft.baseProduction * 2 * diff;
+      if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark');
+      }
+      /*******************************
+       * OFFLINE EARNINGS FOR IDLE MINER
+       *******************************/
+      function processOfflineEarnings() {
+        const lastActive = localStorage.getItem('lastActive');
+        const now = Date.now();
+        if (lastActive) {
+          const diff = (now - Number(lastActive)) / 1000; // seconds offline
+          let offlineEarnings = 0;
+          idleData.shafts.forEach(shaft => {
+            if (shaft.managerHired) {
+              offlineEarnings += shaft.level * shaft.baseProduction * 2 * diff;
+            }
+          });
+          if (offlineEarnings > 0) {
+            idleData.coins += offlineEarnings;
+            alert("Welcome back! You earned " + offlineEarnings.toFixed(1) + " coins while offline.");
           }
-        });
-        if (offlineEarnings > 0) {
-          idleData.coins += offlineEarnings;
-          alert("Welcome back! You earned " + offlineEarnings.toFixed(1) + " coins while offline.");
         }
+        localStorage.setItem('lastActive', now);
       }
-      localStorage.setItem('lastActive', now);
-    }
-    /*******************************
-     * IDLE MINER – MULTIPLE SHAFTS
-     *******************************/
-    let idleData = {
-      coins: 0,
-      shafts: [
-        { level: 1, baseProduction: 10, upgradeCost: 50, managerHired: false, managerCost: 200 }
-      ],
-      newShaftCost: 500
-    };
-    function saveIdleData() {
-      localStorage.setItem('idleData', JSON.stringify(idleData));
-    }
-    function loadIdleData() {
-      const saved = localStorage.getItem('idleData');
-      if (saved) idleData = JSON.parse(saved);
-      processOfflineEarnings();
-      updateIdleDisplay();
-    }
-    function updateIdleDisplay() {
-      document.getElementById('idleCoins').innerText = idleData.coins.toFixed(1);
-      document.getElementById('newShaftCost').innerText = Math.floor(idleData.newShaftCost);
-      updateGlobalBalanceDisplays();
-      renderShafts();
-    }
-    function renderShafts() {
-      const container = document.getElementById('shaftsContainer');
-      container.innerHTML = '';
-      idleData.shafts.forEach((shaft, index) => {
-        let manualValue = shaft.level * shaft.baseProduction;
-        let autoValue = shaft.managerHired ? manualValue * 2 : 0;
-        const div = document.createElement('div');
-        div.className = 'shaft';
-        div.innerHTML = `
-          <h3>Shaft #${index + 1}</h3>
-          <div>Level: ${shaft.level}</div>
-          <div>Manual Mine: ${manualValue} coins</div>
-          <div>Auto Production: ${autoValue} coins/sec</div>
-          <div>Upgrade Cost: ${Math.floor(shaft.upgradeCost)} coins</div>
-          <div>Manager: ${shaft.managerHired ? 'Hired' : 'Not Hired (Cost: ' + shaft.managerCost + ')'}</div>
-          <div style="margin-top:5px;">
-            <button onclick="manualMine(${index})">Mine Manually</button>
-            <button onclick="upgradeShaft(${index})">Upgrade Shaft</button>
-            <button onclick="hireManager(${index})">Hire Manager</button>
-          </div>
-        `;
-        container.appendChild(div);
-      });
-    }
-    function manualMine(index) {
-      let shaft = idleData.shafts[index];
-      let amount = shaft.level * shaft.baseProduction;
-      idleData.coins += amount;
-      updateIdleDisplay();
-      saveIdleData();
-    }
-    function upgradeShaft(index) {
-      let shaft = idleData.shafts[index];
-      if (idleData.coins >= shaft.upgradeCost) {
-        idleData.coins -= shaft.upgradeCost;
-        shaft.level++;
-        shaft.upgradeCost *= 1.5;
+      /*******************************
+       * IDLE MINER – MULTIPLE SHAFTS
+       *******************************/
+      let idleData = {
+        coins: 0,
+        shafts: [
+          { level: 1, baseProduction: 10, upgradeCost: 50, managerHired: false, managerCost: 200 }
+        ],
+        newShaftCost: 500
+      };
+      function saveIdleData() {
+        localStorage.setItem('idleData', JSON.stringify(idleData));
+      }
+      function loadIdleData() {
+        const saved = localStorage.getItem('idleData');
+        if (saved) idleData = JSON.parse(saved);
+        processOfflineEarnings();
         updateIdleDisplay();
-        saveIdleData();
-      } else {
-        alert("Not enough coins to upgrade this shaft!");
       }
-    }
-    function hireManager(index) {
-      let shaft = idleData.shafts[index];
-      if (!shaft.managerHired && idleData.coins >= shaft.managerCost) {
-        idleData.coins -= shaft.managerCost;
-        shaft.managerHired = true;
-        updateIdleDisplay();
-        saveIdleData();
-      } else if (shaft.managerHired) {
-        alert("Manager already hired for this shaft!");
-      } else {
-        alert("Not enough coins to hire manager!");
+      function updateIdleDisplay() {
+        document.getElementById('idleCoins').innerText = idleData.coins.toFixed(1);
+        document.getElementById('newShaftCost').innerText = Math.floor(idleData.newShaftCost);
+        updateGlobalBalanceDisplays();
+        renderShafts();
       }
-    }
-    document.getElementById('purchaseShaftButton').addEventListener('click', function() {
-      if (idleData.coins >= idleData.newShaftCost) {
-        idleData.coins -= idleData.newShaftCost;
-        idleData.shafts.push({ level: 1, baseProduction: 10, upgradeCost: 50, managerHired: false, managerCost: 200 });
-        idleData.newShaftCost *= 1.5;
-        updateIdleDisplay();
-        saveIdleData();
-      } else {
-        alert("Not enough coins to purchase a new shaft!");
-      }
-    });
-    // Auto-production: every second, each shaft with a manager produces coins
-    setInterval(function() {
-      idleData.shafts.forEach(shaft => {
-        if (shaft.managerHired) {
-          let prod = shaft.level * shaft.baseProduction * 2;
-          idleData.coins += prod;
-        }
-      });
-      updateIdleDisplay();
-      saveIdleData();
-    }, 1000);
-    loadIdleData();
-    /*******************************
-     * HIGHER/LOWER GAME (unchanged)
-     *******************************/
-    let hlData = {
-      currentNumber: 0,
-      score: 0,
-      prevNumber: null
-    };
-    function startHLGame() {
-      hlData.currentNumber = Math.floor(Math.random() * 100) + 1;
-      hlData.score = 0;
-      hlData.prevNumber = null;
-      updateHLDisplay();
-    }
-    function updateHLDisplay() {
-      document.getElementById('hlCurrentCard').innerText = hlData.currentNumber;
-      document.getElementById('hlPrevCard').innerText = hlData.prevNumber !== null ? hlData.prevNumber : "N/A";
-      document.getElementById('hlScore').innerText = hlData.score;
-    }
-    function flipHLCard(newNumber) {
-      const card = document.getElementById('hlCurrentCard');
-      card.classList.add('flip');
-      setTimeout(() => {
-        card.innerText = newNumber;
-        card.classList.remove('flip');
-      }, 600);
-    }
-    document.getElementById('higherButton').addEventListener('click', function() {
-      let next = Math.floor(Math.random() * 100) + 1;
-      if (next > hlData.currentNumber) {
-        hlData.score++;
-        hlData.prevNumber = hlData.currentNumber;
-        flipHLCard(next);
-        hlData.currentNumber = next;
-      } else {
-        alert("Wrong! Game Over. Score: " + hlData.score);
-        startHLGame();
-        return;
-      }
-      updateHLDisplay();
-    });
-    document.getElementById('lowerButton').addEventListener('click', function() {
-      let next = Math.floor(Math.random() * 100) + 1;
-      if (next < hlData.currentNumber) {
-        hlData.score++;
-        hlData.prevNumber = hlData.currentNumber;
-        flipHLCard(next);
-        hlData.currentNumber = next;
-      } else {
-        alert("Wrong! Game Over. Score: " + hlData.score);
-        startHLGame();
-        return;
-      }
-      updateHLDisplay();
-    });
-    document.getElementById('resetHLButton').addEventListener('click', function() {
-      if (confirm("Reset Higher/Lower?")) {
-        startHLGame();
-      }
-    });
-    startHLGame();
-    /*******************************
-     * PLINKO GAME – CUSTOM SIMULATION (OLD VERSION, Updated for Realism)
-     *******************************/
-    const plinkoCanvas = document.getElementById('plinkoCanvas');
-    const plinkoCtx = plinkoCanvas.getContext('2d');
-    const plinkoWidth = plinkoCanvas.width;
-    const plinkoHeight = plinkoCanvas.height;
-    // 9 bins with multipliers
-    const binCount = 9;
-    const binMultipliers = [10, 2, 1, 0.5, 0.2, 0.5, 1, 2, 10];
-    const binWidth = plinkoWidth / binCount;
-    // Generate pegs – using 10 rows
-    const plinkoPegs = [];
-    const pegRows = 10;
-    const pegSpacingX = plinkoWidth / 10;
-    const pegSpacingY = 60;
-    const pegRadius = 5;
-    for (let row = 0; row < pegRows; row++) {
-      let offset = (row % 2 === 0) ? pegSpacingX / 2 : 0;
-      let numPegs = Math.floor(plinkoWidth / pegSpacingX);
-      for (let i = 0; i < numPegs; i++) {
-        plinkoPegs.push({
-          x: offset + i * pegSpacingX,
-          y: 50 + row * pegSpacingY,
-          r: pegRadius
+      function renderShafts() {
+        const container = document.getElementById('shaftsContainer');
+        container.innerHTML = '';
+        idleData.shafts.forEach((shaft, index) => {
+          let manualValue = shaft.level * shaft.baseProduction;
+          let autoValue = shaft.managerHired ? manualValue * 2 : 0;
+          const div = document.createElement('div');
+          div.className = 'shaft';
+          div.innerHTML = `
+            <h3>Shaft #${index + 1}</h3>
+            <div>Level: ${shaft.level}</div>
+            <div>Manual Mine: ${manualValue} coins</div>
+            <div>Auto Production: ${autoValue} coins/sec</div>
+            <div>Upgrade Cost: ${Math.floor(shaft.upgradeCost)} coins</div>
+            <div>Manager: ${shaft.managerHired ? 'Hired' : 'Not Hired (Cost: ' + shaft.managerCost + ')'}</div>
+            <div style="margin-top:5px;">
+              <button onclick="manualMine(${index})">Mine Manually</button>
+              <button onclick="upgradeShaft(${index})">Upgrade Shaft</button>
+              <button onclick="hireManager(${index})">Hire Manager</button>
+            </div>
+          `;
+          container.appendChild(div);
         });
       }
-    }
-    let plinkoBalls = [];
-    // Use very low gravity so balls fall slowly
-    const gravity = 0.005;
-    function updatePlinko() {
-      plinkoCtx.clearRect(0, 0, plinkoWidth, plinkoHeight);
-      // Draw bins
-      for (let i = 0; i < binCount; i++) {
-        plinkoCtx.fillStyle = "#ddd";
-        plinkoCtx.fillRect(i * binWidth, plinkoHeight - 30, binWidth, 30);
-        plinkoCtx.fillStyle = "#333";
-        plinkoCtx.font = "14px sans-serif";
-        plinkoCtx.textAlign = "center";
-        plinkoCtx.fillText(binMultipliers[i] + "x", i * binWidth + binWidth / 2, plinkoHeight - 10);
+      window.manualMine = function(index) {
+        let shaft = idleData.shafts[index];
+        let amount = shaft.level * shaft.baseProduction;
+        idleData.coins += amount;
+        updateIdleDisplay();
+        saveIdleData();
       }
-      // Draw pegs
-      plinkoCtx.fillStyle = "#007acc";
-      plinkoPegs.forEach(peg => {
-        plinkoCtx.beginPath();
-        plinkoCtx.arc(peg.x, peg.y, peg.r, 0, Math.PI * 2);
-        plinkoCtx.fill();
-      });
-      // Update and draw balls
-      for (let b = plinkoBalls.length - 1; b >= 0; b--) {
-        const ball = plinkoBalls[b];
-        ball.vy += gravity;  // apply very low gravity
-        // Add horizontal noise for more drift
-        ball.vx += (Math.random() - 0.5) * 0.2;
-        ball.x += ball.vx;
-        ball.y += ball.vy;
-        // Constrain horizontal speed near edges
-        if (ball.x < ball.r + 10) {
-          ball.vx = Math.abs(ball.vx) * 0.8;
-        }
-        if (ball.x > plinkoWidth - ball.r - 10) {
-          ball.vx = -Math.abs(ball.vx) * 0.8;
-        }
-        if (ball.x < ball.r || ball.x > plinkoWidth - ball.r) {
-          ball.vx *= -1;
-        }
-        // Collisions with pegs: adjust ball position and add a slight random horizontal push
-        plinkoPegs.forEach(peg => {
-          let dx = ball.x - peg.x;
-          let dy = ball.y - peg.y;
-          let dist = Math.sqrt(dx * dx + dy * dy);
-          let minDist = ball.r + peg.r;
-          if (dist < minDist && dist > 0) {
-            let nx = dx / dist;
-            let ny = dy / dist;
-            let overlap = minDist - dist;
-            ball.x += nx * overlap;
-            ball.y += ny * overlap;
-            ball.vx += (Math.random() - 0.5) * 0.4;
-            ball.vy *= 0.995;
-          }
-        });
-        // Draw ball
-        plinkoCtx.fillStyle = "#e67e22";
-        plinkoCtx.beginPath();
-        plinkoCtx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-        plinkoCtx.fill();
-        // If ball reaches bottom, determine bin and award coins
-        if (ball.y + ball.r > plinkoHeight - 30) {
-          let binIndex = Math.floor(ball.x / binWidth);
-          if (binIndex < 0) binIndex = 0;
-          if (binIndex >= binCount) binIndex = binCount - 1;
-          let multiplier = binMultipliers[binIndex];
-          let winnings = ball.bet * multiplier;
-          idleData.coins += winnings;
+      window.upgradeShaft = function(index) {
+        let shaft = idleData.shafts[index];
+        if (idleData.coins >= shaft.upgradeCost) {
+          idleData.coins -= shaft.upgradeCost;
+          shaft.level++;
+          shaft.upgradeCost *= 1.5;
           updateIdleDisplay();
           saveIdleData();
-          plinkoBalls.splice(b, 1);
+        } else {
+          alert("Not enough coins to upgrade this shaft!");
         }
       }
-      requestAnimationFrame(updatePlinko);
-    }
-    document.getElementById('dropBallButton').addEventListener('click', function() {
-      let bet = parseFloat(document.getElementById('plinkoBet').value);
-      if (isNaN(bet) || bet <= 0) {
-        alert("Enter a valid bet.");
-        return;
+      window.hireManager = function(index) {
+        let shaft = idleData.shafts[index];
+        if (!shaft.managerHired && idleData.coins >= shaft.managerCost) {
+          idleData.coins -= shaft.managerCost;
+          shaft.managerHired = true;
+          updateIdleDisplay();
+          saveIdleData();
+        } else if (shaft.managerHired) {
+          alert("Manager already hired for this shaft!");
+        } else {
+          alert("Not enough coins to hire manager!");
+        }
       }
-      if (idleData.coins < bet) {
-        alert("Not enough coins!");
-        return;
-      }
-      idleData.coins -= bet;
-      updateIdleDisplay();
-      saveIdleData();
-      // Use a wider initial horizontal speed range so balls can reach outer bins
-      let ball = {
-        x: plinkoWidth / 2 + (Math.random() - 0.5) * 20,
-        y: 20,
-        r: 8,
-        vx: (Math.random() - 0.5) * 2,
-        vy: 0,
-        bet: bet
-      };
-      plinkoBalls.push(ball);
-    });
-    document.getElementById('resetPlinkoButton').addEventListener('click', function() {
-      if (confirm("Reset Plinko?")) {
-        alert("Plinko has been reset.");
-      }
-    });
-    updatePlinko();
-    /*******************************
-     * SLOT MACHINE – PREVENT DOUBLE SPIN
-     *******************************/
-    const slotSymbols = ["🍒", "🍋", "🔔", "⭐", "7️⃣", "🍀"];
-    let slotSpinning = false;
-    function spinReel(reelElement, duration) {
-      return new Promise(resolve => {
-        const emojiElement = reelElement.querySelector('.reel-emoji');
-        emojiElement.classList.add("spinning");
-        let interval = setInterval(() => {
-          emojiElement.innerText = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
-        }, 100);
-        setTimeout(() => {
-          clearInterval(interval);
-          emojiElement.classList.remove("spinning");
-          let finalSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
-          emojiElement.innerText = finalSymbol;
-          resolve(finalSymbol);
-        }, duration);
+      document.getElementById('purchaseShaftButton').addEventListener('click', function() {
+        if (idleData.coins >= idleData.newShaftCost) {
+          idleData.coins -= idleData.newShaftCost;
+          idleData.shafts.push({ level: 1, baseProduction: 10, upgradeCost: 50, managerHired: false, managerCost: 200 });
+          idleData.newShaftCost *= 1.5;
+          updateIdleDisplay();
+          saveIdleData();
+        } else {
+          alert("Not enough coins to purchase a new shaft!");
+        }
       });
-    }
-    document.getElementById('spinSlotButton').addEventListener('click', async function() {
-      if (slotSpinning) return;  // Prevent multiple spins
-      slotSpinning = true;
-      let bet = parseFloat(document.getElementById('betAmount').value);
-      if (isNaN(bet) || bet <= 0) {
-        alert("Enter a valid bet.");
+      // Auto-production: each second, each shaft with a manager produces coins
+      setInterval(function() {
+        idleData.shafts.forEach(shaft => {
+          if (shaft.managerHired) {
+            let prod = shaft.level * shaft.baseProduction * 2;
+            idleData.coins += prod;
+          }
+        });
+        updateIdleDisplay();
+        saveIdleData();
+      }, 1000);
+      loadIdleData();
+      /*******************************
+       * HIGHER/LOWER GAME (unchanged)
+       *******************************/
+      let hlData = {
+        currentNumber: 0,
+        score: 0,
+        prevNumber: null
+      };
+      function startHLGame() {
+        hlData.currentNumber = Math.floor(Math.random() * 100) + 1;
+        hlData.score = 0;
+        hlData.prevNumber = null;
+        updateHLDisplay();
+      }
+      function updateHLDisplay() {
+        document.getElementById('hlCurrentCard').innerText = hlData.currentNumber;
+        document.getElementById('hlPrevCard').innerText = hlData.prevNumber !== null ? hlData.prevNumber : "N/A";
+        document.getElementById('hlScore').innerText = hlData.score;
+      }
+      function flipHLCard(newNumber) {
+        const card = document.getElementById('hlCurrentCard');
+        card.classList.add('flip');
+        setTimeout(() => {
+          card.innerText = newNumber;
+          card.classList.remove('flip');
+        }, 600);
+      }
+      document.getElementById('higherButton').addEventListener('click', function() {
+        let next = Math.floor(Math.random() * 100) + 1;
+        if (next > hlData.currentNumber) {
+          hlData.score++;
+          hlData.prevNumber = hlData.currentNumber;
+          flipHLCard(next);
+          hlData.currentNumber = next;
+        } else {
+          alert("Wrong! Game Over. Score: " + hlData.score);
+          startHLGame();
+          return;
+        }
+        updateHLDisplay();
+      });
+      document.getElementById('lowerButton').addEventListener('click', function() {
+        let next = Math.floor(Math.random() * 100) + 1;
+        if (next < hlData.currentNumber) {
+          hlData.score++;
+          hlData.prevNumber = hlData.currentNumber;
+          flipHLCard(next);
+          hlData.currentNumber = next;
+        } else {
+          alert("Wrong! Game Over. Score: " + hlData.score);
+          startHLGame();
+          return;
+        }
+        updateHLDisplay();
+      });
+      document.getElementById('resetHLButton').addEventListener('click', function() {
+        if (confirm("Reset Higher/Lower?")) {
+          startHLGame();
+        }
+      });
+      startHLGame();
+      /*******************************
+       * PLINKO GAME – CUSTOM SIMULATION (Updated for Realism)
+       *******************************/
+      const plinkoCanvas = document.getElementById('plinkoCanvas');
+      const plinkoCtx = plinkoCanvas.getContext('2d');
+      const plinkoWidth = plinkoCanvas.width;
+      const plinkoHeight = plinkoCanvas.height;
+      // 9 bins with multipliers
+      const binCount = 9;
+      const binMultipliers = [10, 2, 1, 0.5, 0.2, 0.5, 1, 2, 10];
+      const binWidth = plinkoWidth / binCount;
+      // Generate pegs – 10 rows for a binomial distribution
+      const plinkoPegs = [];
+      const pegRows = 10;
+      const pegSpacingX = plinkoWidth / 10;
+      const pegSpacingY = 60;
+      const pegRadius = 5;
+      for (let row = 0; row < pegRows; row++) {
+        let offset = (row % 2 === 0) ? pegSpacingX / 2 : 0;
+        let numPegs = Math.floor(plinkoWidth / pegSpacingX);
+        for (let i = 0; i < numPegs; i++) {
+          plinkoPegs.push({
+            x: offset + i * pegSpacingX,
+            y: 50 + row * pegSpacingY,
+            r: pegRadius
+          });
+        }
+      }
+      let plinkoBalls = [];
+      // Use very low gravity so balls fall slowly
+      const gravity = 0.005;
+      function updatePlinko() {
+        plinkoCtx.clearRect(0, 0, plinkoWidth, plinkoHeight);
+        // Draw bins
+        for (let i = 0; i < binCount; i++) {
+          plinkoCtx.fillStyle = "#ddd";
+          plinkoCtx.fillRect(i * binWidth, plinkoHeight - 30, binWidth, 30);
+          plinkoCtx.fillStyle = "#333";
+          plinkoCtx.font = "14px sans-serif";
+          plinkoCtx.textAlign = "center";
+          plinkoCtx.fillText(binMultipliers[i] + "x", i * binWidth + binWidth / 2, plinkoHeight - 10);
+        }
+        // Draw pegs
+        plinkoCtx.fillStyle = "#007acc";
+        plinkoPegs.forEach(peg => {
+          plinkoCtx.beginPath();
+          plinkoCtx.arc(peg.x, peg.y, peg.r, 0, Math.PI * 2);
+          plinkoCtx.fill();
+        });
+        // Update and draw balls
+        for (let b = plinkoBalls.length - 1; b >= 0; b--) {
+          const ball = plinkoBalls[b];
+          ball.vy += gravity;  // apply very low gravity
+          // Add horizontal noise for drift
+          ball.vx += (Math.random() - 0.5) * 0.2;
+          ball.x += ball.vx;
+          ball.y += ball.vy;
+          // Constrain horizontal speed near edges
+          if (ball.x < ball.r + 10) {
+            ball.vx = Math.abs(ball.vx) * 0.8;
+          }
+          if (ball.x > plinkoWidth - ball.r - 10) {
+            ball.vx = -Math.abs(ball.vx) * 0.8;
+          }
+          if (ball.x < ball.r || ball.x > plinkoWidth - ball.r) {
+            ball.vx *= -1;
+          }
+          // Collisions with pegs: adjust position and add slight randomness
+          plinkoPegs.forEach(peg => {
+            let dx = ball.x - peg.x;
+            let dy = ball.y - peg.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            let minDist = ball.r + peg.r;
+            if (dist < minDist && dist > 0) {
+              let nx = dx / dist;
+              let ny = dy / dist;
+              let overlap = minDist - dist;
+              ball.x += nx * overlap;
+              ball.y += ny * overlap;
+              ball.vx += (Math.random() - 0.5) * 0.4;
+              ball.vy *= 0.995;
+            }
+          });
+          // Draw ball
+          plinkoCtx.fillStyle = "#e67e22";
+          plinkoCtx.beginPath();
+          plinkoCtx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+          plinkoCtx.fill();
+          // When ball reaches bottom, determine bin and award coins
+          if (ball.y + ball.r > plinkoHeight - 30) {
+            let binIndex = Math.floor(ball.x / binWidth);
+            if (binIndex < 0) binIndex = 0;
+            if (binIndex >= binCount) binIndex = binCount - 1;
+            let multiplier = binMultipliers[binIndex];
+            let winnings = ball.bet * multiplier;
+            idleData.coins += winnings;
+            updateIdleDisplay();
+            saveIdleData();
+            plinkoBalls.splice(b, 1);
+          }
+        }
+        requestAnimationFrame(updatePlinko);
+      }
+      document.getElementById('dropBallButton').addEventListener('click', function() {
+        let bet = parseFloat(document.getElementById('plinkoBet').value);
+        if (isNaN(bet) || bet <= 0) {
+          alert("Enter a valid bet.");
+          return;
+        }
+        if (idleData.coins < bet) {
+          alert("Not enough coins!");
+          return;
+        }
+        idleData.coins -= bet;
+        updateIdleDisplay();
+        saveIdleData();
+        // Wider initial horizontal speed to reach outer bins
+        let ball = {
+          x: plinkoWidth / 2 + (Math.random() - 0.5) * 20,
+          y: 20,
+          r: 8,
+          vx: (Math.random() - 0.5) * 2,
+          vy: 0,
+          bet: bet
+        };
+        plinkoBalls.push(ball);
+      });
+      document.getElementById('resetPlinkoButton').addEventListener('click', function() {
+        if (confirm("Reset Plinko?")) {
+          alert("Plinko has been reset.");
+        }
+      });
+      updatePlinko();
+      /*******************************
+       * SLOT MACHINE – PREVENT DOUBLE SPIN
+       *******************************/
+      const slotSymbols = ["🍒", "🍋", "🔔", "⭐", "7️⃣", "🍀"];
+      let slotSpinning = false;
+      function spinReel(reelElement, duration) {
+        return new Promise(resolve => {
+          const emojiElement = reelElement.querySelector('.reel-emoji');
+          emojiElement.classList.add("spinning");
+          let interval = setInterval(() => {
+            emojiElement.innerText = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+          }, 100);
+          setTimeout(() => {
+            clearInterval(interval);
+            emojiElement.classList.remove("spinning");
+            let finalSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+            emojiElement.innerText = finalSymbol;
+            resolve(finalSymbol);
+          }, duration);
+        });
+      }
+      document.getElementById('spinSlotButton').addEventListener('click', async function() {
+        if (slotSpinning) return;
+        slotSpinning = true;
+        let bet = parseFloat(document.getElementById('betAmount').value);
+        if (isNaN(bet) || bet <= 0) {
+          alert("Enter a valid bet.");
+          slotSpinning = false;
+          return;
+        }
+        if (idleData.coins < bet) {
+          alert("Not enough coins!");
+          slotSpinning = false;
+          return;
+        }
+        idleData.coins -= bet;
+        updateIdleDisplay();
+        saveIdleData();
+        document.getElementById('slotResult').innerText = "";
+        const reel1 = document.getElementById('reel1');
+        const reel2 = document.getElementById('reel2');
+        const reel3 = document.getElementById('reel3');
+        const symbol1 = await spinReel(reel1, 1200);
+        const symbol2 = await spinReel(reel2, 1600);
+        const symbol3 = await spinReel(reel3, 2000);
+        let winnings = 0;
+        if (symbol1 === symbol2 && symbol2 === symbol3) {
+          winnings = bet * 5;
+          document.getElementById('slotResult').innerText = "Jackpot! You win " + winnings + " coins!";
+        } else if (symbol1 === symbol2 || symbol1 === symbol3 || symbol2 === symbol3) {
+          winnings = bet * 2;
+          document.getElementById('slotResult').innerText = "You win " + winnings + " coins!";
+        } else {
+          document.getElementById('slotResult').innerText = "Sorry, you lose.";
+        }
+        idleData.coins += winnings;
+        updateIdleDisplay();
+        saveIdleData();
         slotSpinning = false;
-        return;
+      });
+      /*******************************
+       * ROULETTE GAME – REALISTIC
+       *******************************/
+      // European roulette: 37 segments (0 is green; 1-36 alternate red and black)
+      const rouletteCanvas = document.getElementById('rouletteCanvas');
+      const rouletteCtx = rouletteCanvas.getContext('2d');
+      const cx = rouletteCanvas.width / 2;
+      const cy = rouletteCanvas.height / 2;
+      const rouletteRadius = Math.min(cx, cy) - 20;
+      let rouletteAngle = 0;
+      let rouletteAngularVelocity = 0;
+      let rouletteSpinning = false;
+      const rouletteSegments = [];
+      // Create segments: 0 (green), then 1-36 alternating red and black.
+      rouletteSegments.push({ number: 0, color: "#00a651" });
+      for (let i = 1; i <= 36; i++) {
+        rouletteSegments.push({ number: i, color: (i % 2 === 0) ? "#000" : "#d40000" });
       }
-      if (idleData.coins < bet) {
-        alert("Not enough coins!");
-        slotSpinning = false;
-        return;
-      }
-      idleData.coins -= bet;
-      updateIdleDisplay();
-      saveIdleData();
-      document.getElementById('slotResult').innerText = "";
-      const reel1 = document.getElementById('reel1');
-      const reel2 = document.getElementById('reel2');
-      const reel3 = document.getElementById('reel3');
-      const symbol1 = await spinReel(reel1, 1200);
-      const symbol2 = await spinReel(reel2, 1600);
-      const symbol3 = await spinReel(reel3, 2000);
-      let winnings = 0;
-      if (symbol1 === symbol2 && symbol2 === symbol3) {
-        winnings = bet * 5;
-        document.getElementById('slotResult').innerText = "Jackpot! You win " + winnings + " coins!";
-      } else if (symbol1 === symbol2 || symbol1 === symbol3 || symbol2 === symbol3) {
-        winnings = bet * 2;
-        document.getElementById('slotResult').innerText = "You win " + winnings + " coins!";
-      } else {
-        document.getElementById('slotResult').innerText = "Sorry, you lose.";
-      }
-      idleData.coins += winnings;
-      updateIdleDisplay();
-      saveIdleData();
-      slotSpinning = false;
-    });
-    /*******************************
-     * ROULETTE GAME – REALISTIC
-     *******************************/
-    // European roulette: 37 segments (0 is green; 1-36 alternate red and black)
-    const rouletteCanvas = document.getElementById('rouletteCanvas');
-    const rouletteCtx = rouletteCanvas.getContext('2d');
-    const cx = rouletteCanvas.width / 2;
-    const cy = rouletteCanvas.height / 2;
-    const rouletteRadius = Math.min(cx, cy) - 20;
-    let rouletteAngle = 0;
-    let rouletteAngularVelocity = 0;
-    let rouletteSpinning = false;
-    const rouletteSegments = [];
-    // Create segments: 0 (green), then 1-36 alternating red and black.
-    rouletteSegments.push({ number: 0, color: "#00a651" });
-    for (let i = 1; i <= 36; i++) {
-      rouletteSegments.push({ number: i, color: (i % 2 === 0) ? "#000" : "#d40000" });
-    }
-    // Draw the roulette wheel
-    function drawRoulette() {
-      rouletteCtx.clearRect(0, 0, rouletteCanvas.width, rouletteCanvas.height);
-      const segAngle = (2 * Math.PI) / rouletteSegments.length;
-      for (let i = 0; i < rouletteSegments.length; i++) {
-        const startAngle = rouletteAngle + i * segAngle;
-        rouletteCtx.beginPath();
-        rouletteCtx.moveTo(cx, cy);
-        rouletteCtx.arc(cx, cy, rouletteRadius, startAngle, startAngle + segAngle);
-        rouletteCtx.closePath();
-        rouletteCtx.fillStyle = rouletteSegments[i].color;
-        rouletteCtx.fill();
-        // Draw segment numbers
-        rouletteCtx.save();
-        rouletteCtx.translate(cx, cy);
-        rouletteCtx.rotate(startAngle + segAngle / 2);
-        rouletteCtx.textAlign = "right";
+      function drawRoulette() {
+        rouletteCtx.clearRect(0, 0, rouletteCanvas.width, rouletteCanvas.height);
+        const segAngle = (2 * Math.PI) / rouletteSegments.length;
+        for (let i = 0; i < rouletteSegments.length; i++) {
+          const startAngle = rouletteAngle + i * segAngle;
+          rouletteCtx.beginPath();
+          rouletteCtx.moveTo(cx, cy);
+          rouletteCtx.arc(cx, cy, rouletteRadius, startAngle, startAngle + segAngle);
+          rouletteCtx.closePath();
+          rouletteCtx.fillStyle = rouletteSegments[i].color;
+          rouletteCtx.fill();
+          // Draw segment numbers
+          rouletteCtx.save();
+          rouletteCtx.translate(cx, cy);
+          rouletteCtx.rotate(startAngle + segAngle / 2);
+          rouletteCtx.textAlign = "right";
+          rouletteCtx.fillStyle = "#fff";
+          rouletteCtx.font = "bold 16px sans-serif";
+          rouletteCtx.fillText(rouletteSegments[i].number, rouletteRadius - 10, 8);
+          rouletteCtx.restore();
+        }
+        // Draw pointer
         rouletteCtx.fillStyle = "#fff";
-        rouletteCtx.font = "bold 16px sans-serif";
-        rouletteCtx.fillText(rouletteSegments[i].number, rouletteRadius - 10, 8);
-        rouletteCtx.restore();
+        rouletteCtx.beginPath();
+        rouletteCtx.moveTo(cx, 10);
+        rouletteCtx.lineTo(cx - 10, 40);
+        rouletteCtx.lineTo(cx + 10, 40);
+        rouletteCtx.closePath();
+        rouletteCtx.fill();
       }
-      // Draw pointer at top center
-      rouletteCtx.fillStyle = "#fff";
-      rouletteCtx.beginPath();
-      rouletteCtx.moveTo(cx, 10);
-      rouletteCtx.lineTo(cx - 10, 40);
-      rouletteCtx.lineTo(cx + 10, 40);
-      rouletteCtx.closePath();
-      rouletteCtx.fill();
-    }
-    function updateRoulette() {
-      if (rouletteSpinning) {
-        rouletteAngle += rouletteAngularVelocity;
-        rouletteAngularVelocity *= 0.98; // friction deceleration
-        if (rouletteAngularVelocity < 0.002) {
-          rouletteAngularVelocity = 0;
-          rouletteSpinning = false;
-          // Determine winning segment: pointer is fixed at 0 degrees (top)
-          let normAngle = rouletteAngle % (2 * Math.PI);
-          if (normAngle < 0) normAngle += 2 * Math.PI;
-          let winningIndex = rouletteSegments.length - Math.floor((normAngle / (2 * Math.PI)) * rouletteSegments.length) - 1;
-          winningIndex = winningIndex % rouletteSegments.length;
-          const winningSegment = rouletteSegments[winningIndex];
-          // Evaluate bet
-          evaluateRouletteBet(winningSegment);
+      function updateRoulette() {
+        if (rouletteSpinning) {
+          rouletteAngle += rouletteAngularVelocity;
+          rouletteAngularVelocity *= 0.98;
+          if (rouletteAngularVelocity < 0.002) {
+            rouletteAngularVelocity = 0;
+            rouletteSpinning = false;
+            let normAngle = rouletteAngle % (2 * Math.PI);
+            if (normAngle < 0) normAngle += 2 * Math.PI;
+            let winningIndex = rouletteSegments.length - Math.floor((normAngle / (2 * Math.PI)) * rouletteSegments.length) - 1;
+            winningIndex = winningIndex % rouletteSegments.length;
+            const winningSegment = rouletteSegments[winningIndex];
+            evaluateRouletteBet(winningSegment);
+          }
         }
+        drawRoulette();
+        requestAnimationFrame(updateRoulette);
       }
-      drawRoulette();
-      requestAnimationFrame(updateRoulette);
-    }
-    // UI for roulette bets
-    const betTypeSelect = document.getElementById("betType");
-    const colorChoiceDiv = document.getElementById("colorChoice");
-    const numberChoiceDiv = document.getElementById("numberChoice");
-    betTypeSelect.addEventListener("change", function() {
-      if (this.value === "color") {
-        colorChoiceDiv.style.display = "inline-block";
-        numberChoiceDiv.style.display = "none";
-      } else {
-        colorChoiceDiv.style.display = "none";
-        numberChoiceDiv.style.display = "inline-block";
-      }
-    });
-    document.getElementById('spinRouletteButton').addEventListener('click', function() {
-      if (rouletteSpinning) return;
-      let betAmount = parseFloat(document.getElementById("rouletteBetAmount").value);
-      if (isNaN(betAmount) || betAmount <= 0) {
-        alert("Enter a valid bet amount.");
-        return;
-      }
-      if (idleData.coins < betAmount) {
-        alert("Not enough coins!");
-        return;
-      }
-      // Deduct bet amount
-      idleData.coins -= betAmount;
-      updateIdleDisplay();
-      saveIdleData();
-      // Store bet details in a global variable
-      rouletteBet = {
-        amount: betAmount,
-        type: betTypeSelect.value,
-        value: (betTypeSelect.value === "color") ? document.getElementById("betColor").value : parseInt(document.getElementById("betNumber").value)
-      };
-      rouletteAngularVelocity = Math.random() * 0.3 + 0.3;
-      rouletteSpinning = true;
-      document.getElementById('rouletteResult').innerText = "Spinning...";
-    });
-    let rouletteBet = null;
-    function evaluateRouletteBet(winningSegment) {
-      let win = false;
-      if (rouletteBet.type === "number") {
-        if (winningSegment.number === rouletteBet.value) {
-          win = true;
-          // For number bet, payout is 35:1
-          rouletteBet.payout = rouletteBet.amount * 35;
+      const betTypeSelect = document.getElementById("betType");
+      const colorChoiceDiv = document.getElementById("colorChoice");
+      const numberChoiceDiv = document.getElementById("numberChoice");
+      betTypeSelect.addEventListener("change", function() {
+        if (this.value === "color") {
+          colorChoiceDiv.style.display = "inline-block";
+          numberChoiceDiv.style.display = "none";
+        } else {
+          colorChoiceDiv.style.display = "none";
+          numberChoiceDiv.style.display = "inline-block";
         }
-      } else if (rouletteBet.type === "color") {
-        // For color bet, payout is 1:1
-        // Note: 0 is green and loses color bets.
-        if (winningSegment.number !== 0 && winningSegment.color === ((rouletteBet.value === "red") ? "#d40000" : "#000")) {
-          win = true;
-          rouletteBet.payout = rouletteBet.amount;
-        }
-      }
-      let resultText = "Winning Number: " + winningSegment.number;
-      if (win) {
-        resultText += " – You win " + rouletteBet.payout + " coins!";
-        idleData.coins += rouletteBet.payout;
-      } else {
-        resultText += " – You lose.";
-      }
-      document.getElementById('rouletteResult').innerText = resultText;
-      updateIdleDisplay();
-      saveIdleData();
-    }
-    updateRoulette();
-    /*******************************
-     * SLOT MACHINE – PREVENT DOUBLE SPIN
-     *******************************/
-    const slotSymbols = ["🍒", "🍋", "🔔", "⭐", "7️⃣", "🍀"];
-    let slotSpinning = false;
-    function spinReel(reelElement, duration) {
-      return new Promise(resolve => {
-        const emojiElement = reelElement.querySelector('.reel-emoji');
-        emojiElement.classList.add("spinning");
-        let interval = setInterval(() => {
-          emojiElement.innerText = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
-        }, 100);
-        setTimeout(() => {
-          clearInterval(interval);
-          emojiElement.classList.remove("spinning");
-          let finalSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
-          emojiElement.innerText = finalSymbol;
-          resolve(finalSymbol);
-        }, duration);
       });
-    }
-    document.getElementById('spinSlotButton').addEventListener('click', async function() {
-      if (slotSpinning) return;
-      slotSpinning = true;
-      let bet = parseFloat(document.getElementById('betAmount').value);
-      if (isNaN(bet) || bet <= 0) {
-        alert("Enter a valid bet.");
+      let rouletteBet = null;
+      document.getElementById('spinRouletteButton').addEventListener('click', function() {
+        if (rouletteSpinning) return;
+        let betAmount = parseFloat(document.getElementById("rouletteBetAmount").value);
+        if (isNaN(betAmount) || betAmount <= 0) {
+          alert("Enter a valid bet amount.");
+          return;
+        }
+        if (idleData.coins < betAmount) {
+          alert("Not enough coins!");
+          return;
+        }
+        idleData.coins -= betAmount;
+        updateIdleDisplay();
+        saveIdleData();
+        // Set bet details
+        rouletteBet = {
+          amount: betAmount,
+          type: betTypeSelect.value,
+          value: (betTypeSelect.value === "color") ? document.getElementById("betColor").value : parseInt(document.getElementById("betNumber").value)
+        };
+        rouletteAngularVelocity = Math.random() * 0.3 + 0.3;
+        rouletteSpinning = true;
+        document.getElementById('rouletteResult').innerText = "Spinning...";
+      });
+      function evaluateRouletteBet(winningSegment) {
+        let win = false;
+        if (rouletteBet.type === "number") {
+          if (winningSegment.number === rouletteBet.value) {
+            win = true;
+            rouletteBet.payout = rouletteBet.amount * 35;
+          }
+        } else if (rouletteBet.type === "color") {
+          if (winningSegment.number !== 0 && winningSegment.color === ((rouletteBet.value === "red") ? "#d40000" : "#000")) {
+            win = true;
+            rouletteBet.payout = rouletteBet.amount;
+          }
+        }
+        let resultText = "Winning Number: " + winningSegment.number;
+        if (win) {
+          resultText += " – You win " + rouletteBet.payout + " coins!";
+          idleData.coins += rouletteBet.payout;
+        } else {
+          resultText += " – You lose.";
+        }
+        document.getElementById('rouletteResult').innerText = resultText;
+        updateIdleDisplay();
+        saveIdleData();
+      }
+      updateRoulette();
+      /*******************************
+       * SLOT MACHINE – PREVENT DOUBLE SPIN
+       *******************************/
+      const slotSymbols = ["🍒", "🍋", "🔔", "⭐", "7️⃣", "🍀"];
+      let slotSpinning = false;
+      function spinReel(reelElement, duration) {
+        return new Promise(resolve => {
+          const emojiElement = reelElement.querySelector('.reel-emoji');
+          emojiElement.classList.add("spinning");
+          let interval = setInterval(() => {
+            emojiElement.innerText = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+          }, 100);
+          setTimeout(() => {
+            clearInterval(interval);
+            emojiElement.classList.remove("spinning");
+            let finalSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+            emojiElement.innerText = finalSymbol;
+            resolve(finalSymbol);
+          }, duration);
+        });
+      }
+      document.getElementById('spinSlotButton').addEventListener('click', async function() {
+        if (slotSpinning) return;
+        slotSpinning = true;
+        let bet = parseFloat(document.getElementById('betAmount').value);
+        if (isNaN(bet) || bet <= 0) {
+          alert("Enter a valid bet.");
+          slotSpinning = false;
+          return;
+        }
+        if (idleData.coins < bet) {
+          alert("Not enough coins!");
+          slotSpinning = false;
+          return;
+        }
+        idleData.coins -= bet;
+        updateIdleDisplay();
+        saveIdleData();
+        document.getElementById('slotResult').innerText = "";
+        const reel1 = document.getElementById('reel1');
+        const reel2 = document.getElementById('reel2');
+        const reel3 = document.getElementById('reel3');
+        const symbol1 = await spinReel(reel1, 1200);
+        const symbol2 = await spinReel(reel2, 1600);
+        const symbol3 = await spinReel(reel3, 2000);
+        let winnings = 0;
+        if (symbol1 === symbol2 && symbol2 === symbol3) {
+          winnings = bet * 5;
+          document.getElementById('slotResult').innerText = "Jackpot! You win " + winnings + " coins!";
+        } else if (symbol1 === symbol2 || symbol1 === symbol3 || symbol2 === symbol3) {
+          winnings = bet * 2;
+          document.getElementById('slotResult').innerText = "You win " + winnings + " coins!";
+        } else {
+          document.getElementById('slotResult').innerText = "Sorry, you lose.";
+        }
+        idleData.coins += winnings;
+        updateIdleDisplay();
+        saveIdleData();
         slotSpinning = false;
-        return;
-      }
-      if (idleData.coins < bet) {
-        alert("Not enough coins!");
-        slotSpinning = false;
-        return;
-      }
-      idleData.coins -= bet;
-      updateIdleDisplay();
-      saveIdleData();
-      document.getElementById('slotResult').innerText = "";
-      const reel1 = document.getElementById('reel1');
-      const reel2 = document.getElementById('reel2');
-      const reel3 = document.getElementById('reel3');
-      const symbol1 = await spinReel(reel1, 1200);
-      const symbol2 = await spinReel(reel2, 1600);
-      const symbol3 = await spinReel(reel3, 2000);
-      let winnings = 0;
-      if (symbol1 === symbol2 && symbol2 === symbol3) {
-        winnings = bet * 5;
-        document.getElementById('slotResult').innerText = "Jackpot! You win " + winnings + " coins!";
-      } else if (symbol1 === symbol2 || symbol1 === symbol3 || symbol2 === symbol3) {
-        winnings = bet * 2;
-        document.getElementById('slotResult').innerText = "You win " + winnings + " coins!";
-      } else {
-        document.getElementById('slotResult').innerText = "Sorry, you lose.";
-      }
-      idleData.coins += winnings;
-      updateIdleDisplay();
-      saveIdleData();
-      slotSpinning = false;
+      });
     });
+      // End of DOMContentLoaded
   </script>
 </body>
 </html>
