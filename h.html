@@ -122,6 +122,7 @@
     /***** Variabelen en instellingen *****/
     const BOARD_SIZE = 8;
     const CELL_SIZE = 50; // in pixels
+    const GAP = 2; // gap tussen cellen
 
     let board = []; // 2D array: null of {color: string}
     let score = 0;
@@ -154,7 +155,7 @@
     // Kleurenset voor de stukken
     const colors = ["#e74c3c", "#3498db", "#2ecc71", "#f1c40f", "#9b59b6", "#e67e22"];
 
-    // We tonen telkens 3 stukken
+    // We tonen telkens 3 stukken; als een stuk geplaatst is, wordt deze op null gezet.
     let currentPieces = [null, null, null];
 
     // Referenties naar DOM-elementen
@@ -295,6 +296,15 @@
       if (!draggingElem) return;
 
       const boardRect = boardElement.getBoundingClientRect();
+      // Bepaal de offset binnen het bord (rekening houdend met border en padding)
+      const computedStyle = window.getComputedStyle(boardElement);
+      const borderLeft = parseInt(computedStyle.borderLeftWidth);
+      const paddingLeft = parseInt(computedStyle.paddingLeft);
+      const borderTop = parseInt(computedStyle.borderTopWidth);
+      const paddingTop = parseInt(computedStyle.paddingTop);
+      const offsetX = borderLeft + paddingLeft;
+      const offsetY = borderTop + paddingTop;
+
       let clientX, clientY;
       if (e.changedTouches) {
         clientX = e.changedTouches[0].clientX;
@@ -306,24 +316,33 @@
       // Is de drop binnen het bord?
       if (clientX >= boardRect.left && clientX <= boardRect.right &&
           clientY >= boardRect.top && clientY <= boardRect.bottom) {
-        // Bereken de doelcel (let op: rekening houdend met de cell-gap)
-        const dropX = clientX - boardRect.left;
-        const dropY = clientY - boardRect.top;
-        const targetCol = Math.floor(dropX / 52); // 50px + 2px gap
-        const targetRow = Math.floor(dropY / 52);
+        // Bereken de doellocatie t.o.v. de grid
+        const dropX = clientX - boardRect.left - offsetX;
+        const dropY = clientY - boardRect.top - offsetY;
+        const targetCol = Math.floor(dropX / (CELL_SIZE + GAP));
+        const targetRow = Math.floor(dropY / (CELL_SIZE + GAP));
         const pieceIndex = draggingElem.dataset.pieceIndex;
         const piece = currentPieces[pieceIndex];
         if (canPlacePiece(piece, targetRow, targetCol)) {
           placePiece(piece, targetRow, targetCol);
-          // Verwijder het geplaatste stuk en vervang het door een nieuw stuk
+          // Verwijder het geplaatste stuk uit de set en uit de UI
           currentPieces[pieceIndex] = null;
           draggingElem.remove();
-          currentPieces[pieceIndex] = createRandomPiece();
-          renderPieces();
           checkAndClearLines();
           updateScore();
           if (isGameOver()) {
             showGameOver();
+            draggingElem = null;
+            return;
+          }
+          // Als alle drie stukken geplaatst zijn, genereer dan een nieuwe set
+          if (currentPieces.every(piece => piece === null)) {
+            currentPieces = [
+              createRandomPiece(),
+              createRandomPiece(),
+              createRandomPiece()
+            ];
+            renderPieces();
           }
         } else {
           // Ongeldige plaatsing: zet terug
