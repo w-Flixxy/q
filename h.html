@@ -2,42 +2,36 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
-  <title>Platformer Spel</title>
+  <title>Block Blast-achtig Spel</title>
   <style>
     body {
       margin: 0;
-      background: #000;
+      background: #222;
+      color: #fff;
+      font-family: sans-serif;
+      text-align: center;
     }
     canvas {
+      margin-top: 20px;
+      background: #333;
       display: block;
-      margin: 0 auto;
+      margin-left: auto;
+      margin-right: auto;
     }
   </style>
 </head>
 <body>
-  <!-- Phaser 3 via CDN -->
+  <h1>Block Blast-achtig Spel</h1>
+  <p>Klik op een groep van twee of meer aangrenzende blokken om ze te verwijderen.</p>
+  <!-- Phaser 3 laden via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
   <script>
-    // Globale variabelen
-    let player;
-    let stars;
-    let bombs;
-    let cursors;
-    let score = 0;
-    let scoreText;
-
-    // Gameconfiguratie
+    // Spelconfiguratie
     const config = {
       type: Phaser.AUTO,
       width: 800,
       height: 600,
-      physics: {
-        default: 'arcade',
-        arcade: {
-          gravity: { y: 300 },
-          debug: false
-        }
-      },
+      backgroundColor: 0x222222,
       scene: {
         preload: preload,
         create: create,
@@ -47,122 +41,194 @@
 
     const game = new Phaser.Game(config);
 
-    // Laad assets
+    // Rooster-instellingen
+    const gridRows = 10;
+    const gridCols = 10;
+    const blockSize = 50;
+    // Plaats het rooster gecentreerd in het canvas
+    const startX = (config.width - gridCols * blockSize) / 2;
+    const startY = (config.height - gridRows * blockSize) / 2;
+
+    // Definieer een aantal kleuren
+    const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff];
+
+    let grid = [];
+    let score = 0;
+    let scoreText;
+
     function preload() {
-      this.load.image('sky', 'https://labs.phaser.io/assets/skies/space3.png');
-      this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
-      this.load.image('star', 'https://labs.phaser.io/assets/sprites/star.png');
-      this.load.image('bomb', 'https://labs.phaser.io/assets/sprites/bomb.png');
-      this.load.spritesheet('dude', 'https://labs.phaser.io/assets/sprites/dude.png', { frameWidth: 32, frameHeight: 48 });
+      // Maak textures voor de verschillende blokken
+      for (let i = 0; i < colors.length; i++) {
+        const key = 'block-' + i;
+        let graphics = this.make.graphics({ x: 0, y: 0, add: false });
+        graphics.fillStyle(colors[i], 1);
+        graphics.fillRect(0, 0, blockSize, blockSize);
+        graphics.generateTexture(key, blockSize, blockSize);
+        graphics.destroy();
+      }
     }
 
-    // Maak de wereld aan
     function create() {
-      // Achtergrond
-      this.add.image(400, 300, 'sky');
-
-      // Platforms (grond en ledges)
-      const platforms = this.physics.add.staticGroup();
-      platforms.create(400, 568, 'ground').setScale(2).refreshBody();
-      platforms.create(600, 400, 'ground');
-      platforms.create(50, 250, 'ground');
-      platforms.create(750, 220, 'ground');
-
-      // Speler
-      player = this.physics.add.sprite(100, 450, 'dude');
-      player.setBounce(0.2);
-      player.setCollideWorldBounds(true);
-
-      // Animaties voor de speler
-      this.anims.create({
-        key: 'left',
-        frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
-        frameRate: 10,
-        repeat: -1
-      });
-      this.anims.create({
-        key: 'turn',
-        frames: [ { key: 'dude', frame: 4 } ],
-        frameRate: 20
-      });
-      this.anims.create({
-        key: 'right',
-        frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }),
-        frameRate: 10,
-        repeat: -1
-      });
-
-      // Zorg dat speler en platforms botsen
-      this.physics.add.collider(player, platforms);
-
-      // Sterren
-      stars = this.physics.add.group({
-        key: 'star',
-        repeat: 11,
-        setXY: { x: 12, y: 0, stepX: 70 }
-      });
-      stars.children.iterate(function(child) {
-        child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
-      });
-      this.physics.add.collider(stars, platforms);
-      this.physics.add.overlap(player, stars, collectStar, null, this);
-
-      // Vijanden (bommen)
-      bombs = this.physics.add.group();
-      this.physics.add.collider(bombs, platforms);
-      this.physics.add.collider(player, bombs, hitBomb, null, this);
-
-      // Input
-      cursors = this.input.keyboard.createCursorKeys();
+      // Maak het rooster en vul het met blokken
+      grid = [];
+      for (let row = 0; row < gridRows; row++) {
+        grid[row] = [];
+        for (let col = 0; col < gridCols; col++) {
+          const colorIndex = Phaser.Math.Between(0, colors.length - 1);
+          const x = startX + col * blockSize + blockSize / 2;
+          const y = startY + row * blockSize + blockSize / 2;
+          const sprite = this.add.sprite(x, y, 'block-' + colorIndex);
+          sprite.setInteractive(); // Zorgt ervoor dat blokken interactief zijn (optioneel)
+          grid[row][col] = { sprite: sprite, color: colorIndex };
+        }
+      }
 
       // Scoreweergave
-      scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#fff' });
-    }
+      scoreText = this.add.text(10, 10, 'Score: 0', { fontSize: '24px', fill: '#fff' });
 
-    // Update-functie: wordt iedere frame aangeroepen
-    function update() {
-      if (cursors.left.isDown) {
-        player.setVelocityX(-160);
-        player.anims.play('left', true);
-      } else if (cursors.right.isDown) {
-        player.setVelocityX(160);
-        player.anims.play('right', true);
-      } else {
-        player.setVelocityX(0);
-        player.anims.play('turn');
-      }
+      // Pointer-event: klik op het canvas
+      this.input.on('pointerdown', function(pointer) {
+        // Bepaal of de klik binnen het rooster valt
+        if (
+          pointer.x < startX ||
+          pointer.x >= startX + gridCols * blockSize ||
+          pointer.y < startY ||
+          pointer.y >= startY + gridRows * blockSize
+        ) {
+          return;
+        }
+        const col = Math.floor((pointer.x - startX) / blockSize);
+        const row = Math.floor((pointer.y - startY) / blockSize);
+        if (!grid[row][col]) return; // Lege plek
 
-      if (cursors.up.isDown && player.body.touching.down) {
-        player.setVelocityY(-330);
-      }
-    }
+        const targetColor = grid[row][col].color;
+        const cluster = getCluster(row, col, targetColor);
 
-    // Functie voor het oppakken van sterren
-    function collectStar(player, star) {
-      star.disableBody(true, true);
-      score += 10;
-      scoreText.setText('Score: ' + score);
+        // Alleen verwijderen als er minimaal twee blokken aan elkaar liggen
+        if (cluster.length < 2) return;
 
-      // Als alle sterren zijn opgepakt, maak nieuwe sterren en voeg een bom toe
-      if (stars.countActive(true) === 0) {
-        stars.children.iterate(function(child) {
-          child.enableBody(true, child.x, 0, true, true);
+        // Verwijder alle blokken in de cluster
+        cluster.forEach(function(cell) {
+          const r = cell.row, c = cell.col;
+          grid[r][c].sprite.destroy();
+          grid[r][c] = null;
         });
 
-        const x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
-        const bomb = bombs.create(x, 16, 'bomb');
-        bomb.setBounce(1);
-        bomb.setCollideWorldBounds(true);
-        bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
+        // Update score (bijv. aantal²)
+        score += cluster.length * cluster.length;
+        scoreText.setText('Score: ' + score);
+
+        // Laat de blokken boven naar beneden vallen en verschuif lege kolommen
+        dropBlocks();
+        shiftColumns();
+
+        // (Optioneel) Controleer op spel-einde: geen aangrenzende gelijke blokken
+        // if (checkGameOver()) {
+        //   scoreText.setText('Game Over! Final Score: ' + score);
+        // }
+      }, this);
+
+      // Flood-fill: vind alle verbonden blokken met dezelfde kleur
+      function getCluster(row, col, targetColor) {
+        const cluster = [];
+        const visited = Array.from({ length: gridRows }, () => Array(gridCols).fill(false));
+        const stack = [{ row, col }];
+
+        while (stack.length > 0) {
+          const cell = stack.pop();
+          const r = cell.row, c = cell.col;
+          if (r < 0 || r >= gridRows || c < 0 || c >= gridCols) continue;
+          if (visited[r][c]) continue;
+          visited[r][c] = true;
+          if (!grid[r][c]) continue;
+          if (grid[r][c].color !== targetColor) continue;
+          cluster.push({ row: r, col: c });
+          stack.push({ row: r - 1, col: c });
+          stack.push({ row: r + 1, col: c });
+          stack.push({ row: r, col: c - 1 });
+          stack.push({ row: r, col: c + 1 });
+        }
+        return cluster;
       }
+
+      // Laat blokken vallen: per kolom, schuif alle niet-lege blokken naar beneden
+      function dropBlocks() {
+        for (let col = 0; col < gridCols; col++) {
+          let emptySpots = 0;
+          for (let row = gridRows - 1; row >= 0; row--) {
+            if (!grid[row][col]) {
+              emptySpots++;
+            } else if (emptySpots > 0) {
+              // Verplaats blok naar de positie van de eerste lege plek onderaan
+              grid[row + emptySpots][col] = grid[row][col];
+              grid[row][col] = null;
+              // Update de y-positie van het sprite
+              const newY = startY + (row + emptySpots) * blockSize + blockSize / 2;
+              grid[row + emptySpots][col].sprite.y = newY;
+            }
+          }
+        }
+      }
+
+      // Verschuif kolommen naar links als deze volledig leeg zijn
+      function shiftColumns() {
+        let targetCol = 0;
+        for (let col = 0; col < gridCols; col++) {
+          // Controleer of de kolom leeg is
+          let isEmpty = true;
+          for (let row = 0; row < gridRows; row++) {
+            if (grid[row][col]) {
+              isEmpty = false;
+              break;
+            }
+          }
+          if (!isEmpty) {
+            // Als targetCol anders is dan de huidige kolom, verplaats dan de kolom
+            if (targetCol !== col) {
+              for (let row = 0; row < gridRows; row++) {
+                if (grid[row][col]) {
+                  grid[row][targetCol] = grid[row][col];
+                  grid[row][col] = null;
+                  // Update de x-positie van het sprite
+                  const newX = startX + targetCol * blockSize + blockSize / 2;
+                  grid[row][targetCol].sprite.x = newX;
+                }
+              }
+            }
+            targetCol++;
+          }
+        }
+      }
+
+      // (Optioneel) Controleer of er nog mogelijke zetten zijn
+      // function checkGameOver() {
+      //   for (let row = 0; row < gridRows; row++) {
+      //     for (let col = 0; col < gridCols; col++) {
+      //       if (grid[row][col]) {
+      //         const color = grid[row][col].color;
+      //         // Kijk naar de buren
+      //         const neighbors = [
+      //           { row: row - 1, col: col },
+      //           { row: row + 1, col: col },
+      //           { row: row, col: col - 1 },
+      //           { row: row, col: col + 1 }
+      //         ];
+      //         for (let n of neighbors) {
+      //           if (n.row >= 0 && n.row < gridRows && n.col >= 0 && n.col < gridCols) {
+      //             if (grid[n.row][n.col] && grid[n.row][n.col].color === color) {
+      //               return false;
+      //             }
+      //           }
+      //         }
+      //       }
+      //     }
+      //   }
+      //   return true;
+      // }
     }
 
-    // Functie als de speler door een bom wordt geraakt
-    function hitBomb(player, bomb) {
-      this.physics.pause();
-      player.setTint(0xff0000);
-      player.anims.play('turn');
-      scoreText.setText('Game Over! Final Score: ' + score);
+    function update() {
+      // (Optioneel) Animaties of extra logica per frame
     }
   </script>
 </body>
