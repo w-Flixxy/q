@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sigma Sooper Duper Shooter</title>
+    <title>Sigma Sooper Duper Shooter met Shop</title>
     <style>
-        /* CSS-reset en body-stijlen */
+        /* CSS-reset en basisstijlen */
         * {
             margin: 0;
             padding: 0;
@@ -35,6 +35,7 @@
         #overlay div {
             margin: 5px 0;
         }
+        /* Game Over scherm */
         #gameOverScreen {
             position: absolute;
             top: 0;
@@ -49,6 +50,7 @@
             color: #fff;
             font-size: 32px;
             display: none;
+            z-index: 10;
         }
         #gameOverScreen button {
             margin-top: 20px;
@@ -63,6 +65,43 @@
         #gameOverScreen button:hover {
             background: #ff2222;
         }
+        /* Shop scherm */
+        #shopScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: #fff;
+            font-size: 24px;
+            display: none;
+            z-index: 9;
+        }
+        #shopScreen div, #shopScreen button {
+            margin: 10px;
+        }
+        #shopScreen button {
+            padding: 8px 16px;
+            font-size: 18px;
+            cursor: pointer;
+            background: #444;
+            border: 2px solid #666;
+            color: #fff;
+            border-radius: 4px;
+        }
+        #shopScreen button:hover {
+            background: #666;
+        }
+        #shopButtons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
@@ -74,6 +113,18 @@
         <div>Score: <span id="score">0</span></div>
         <div>Levens: <span id="lives">3</span></div>
         <div>Level: <span id="level">1</span></div>
+    </div>
+
+    <!-- Shop scherm -->
+    <div id="shopScreen">
+        <div style="font-size: 32px;">SHOP</div>
+        <div>Huidige Score: <span id="shopScore">0</span></div>
+        <div id="shopButtons">
+            <button id="buyMove">Verhoog Beweging (50 punten)</button>
+            <button id="buyShoot">Verhoog Schietsnelheid (75 punten)</button>
+            <button id="buyTurret">Koop Torentje (100 punten)</button>
+            <button id="continueBtn" style="margin-top: 20px; background: #00aa00;">Volgende Golf</button>
+        </div>
     </div>
 
     <!-- Game-over scherm -->
@@ -97,6 +148,13 @@
     const finalScoreText = document.getElementById('finalScore');
     const restartBtn = document.getElementById('restartBtn');
 
+    const shopScreen = document.getElementById('shopScreen');
+    const shopScoreText = document.getElementById('shopScore');
+    const buyMoveBtn = document.getElementById('buyMove');
+    const buyShootBtn = document.getElementById('buyShoot');
+    const buyTurretBtn = document.getElementById('buyTurret');
+    const continueBtn = document.getElementById('continueBtn');
+
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
 
@@ -104,7 +162,7 @@
 
     // Spelerobject
     const player = {
-        x: canvasWidth / 2,
+        x: canvasWidth / 2 - 20,
         y: canvasHeight - 60,
         width: 40,
         height: 40,
@@ -114,6 +172,10 @@
         invincible: false,
         invincibleTimer: 0
     };
+
+    // Schiet-instellingen
+    let shootCooldown = 500; // minimale tijd tussen schoten in ms
+    let lastShootTime = 0;
 
     // Schoten van de speler
     const bullets = [];
@@ -126,17 +188,19 @@
     let enemiesSpawnedThisWave = 0;
     let waveCleared = false;
 
-    // Projectielen van vijanden (optioneel: maak het complexer)
-    const enemyBullets = [];
+    // Turrets (automatische schieters)
+    const turrets = [];
+    const turretBullets = [];
 
     // Score en level
     let score = 0;
     let level = 1;
 
     let gameOver = false;
+    let inShop = false;
 
     // ============================
-    // Hulpfuncties
+    // Hulpfuncties voor tekenen en botsingen
     // ============================
     function drawRect(obj) {
         ctx.fillStyle = obj.color;
@@ -192,7 +256,7 @@
     }
 
     // ============================
-    // Schieten door speler
+    // Schieten door speler (met cooldown)
     // ============================
     document.addEventListener('keydown', (e) => {
         if (e.code === 'Space') {
@@ -202,7 +266,10 @@
     });
 
     function shootBullet() {
-        // Beperk aantal schoten tegelijk indien gewenst
+        const now = Date.now();
+        if (now - lastShootTime < shootCooldown) return; // nog in cooldown
+        lastShootTime = now;
+
         bullets.push({
             x: player.x + player.width / 2 - 5,
             y: player.y,
@@ -240,7 +307,7 @@
     }
 
     function updateEnemies(deltaTime) {
-        // Spawn logic
+        // Spawn logic, alleen als we niet in de shop zitten
         if (!waveCleared && Date.now() - lastEnemySpawn > enemySpawnInterval && enemiesSpawnedThisWave < enemiesPerWave) {
             spawnEnemy();
             enemiesSpawnedThisWave++;
@@ -249,15 +316,8 @@
         // Als alle vijanden zijn gespawned en geen vijanden meer bestaan => wave voorbij
         if (enemiesSpawnedThisWave >= enemiesPerWave && enemies.length === 0) {
             waveCleared = true;
-        }
-        // Als wave voorbij, ga naar volgend level
-        if (waveCleared) {
-            level++;
-            overlayLevel.textContent = level;
-            enemiesPerWave += 2; // meer vijanden per wave
-            enemiesSpawnedThisWave = 0;
-            lastEnemySpawn = 0;
-            waveCleared = false;
+            // Ga naar shop
+            showShop();
         }
         // Update en teken elke vijand
         for (let i = enemies.length - 1; i >= 0; i--) {
@@ -290,6 +350,53 @@
                     break;
                 }
             }
+            // Check botsing met elke kogel van turrets
+            for (let j = turretBullets.length - 1; j >= 0; j--) {
+                const tb = turretBullets[j];
+                if (detectCollision(tb, e)) {
+                    enemies.splice(i, 1);
+                    turretBullets.splice(j, 1);
+                    score += 10;
+                    overlayScore.textContent = score;
+                    break;
+                }
+            }
+        }
+    }
+
+    // ============================
+    // Turret functionaliteit
+    // ============================
+    function updateTurrets() {
+        const now = Date.now();
+        for (let t of turrets) {
+            // Teken turret
+            drawRect(t);
+            // Check of turret een kogel mag afvuren
+            if (now - t.lastShoot > t.shootInterval) {
+                t.lastShoot = now;
+                turretBullets.push({
+                    x: t.x + t.width / 2 - 5,
+                    y: t.y,
+                    width: 10,
+                    height: 20,
+                    speed: 5,
+                    color: '#ff00ff'
+                });
+            }
+        }
+    }
+
+    function updateTurretBullets() {
+        for (let i = turretBullets.length - 1; i >= 0; i--) {
+            const b = turretBullets[i];
+            b.y -= b.speed;
+            // Verwijder kogel als het boven canvas uitgaat
+            if (b.y + b.height < 0) {
+                turretBullets.splice(i, 1);
+                continue;
+            }
+            drawRect(b);
         }
     }
 
@@ -336,12 +443,20 @@
 
     restartBtn.addEventListener('click', () => {
         // Reset alle variabelen
-        player.x = canvasWidth / 2;
+        resetGame();
+        gameOverScreen.style.display = 'none';
+        animate(0);
+    });
+
+    function resetGame() {
+        player.x = canvasWidth / 2 - 20;
         player.y = canvasHeight - 60;
         player.lives = 3;
         overlayLives.textContent = player.lives;
         bullets.length = 0;
         enemies.length = 0;
+        turrets.length = 0;
+        turretBullets.length = 0;
         score = 0;
         level = 1;
         enemiesPerWave = 5;
@@ -351,9 +466,91 @@
         overlayLevel.textContent = level;
         lastEnemySpawn = 0;
         gameOver = false;
-        player.invincible = false;
-        gameOverScreen.style.display = 'none';
-        animate(0);
+        inShop = false;
+        player.speed = 4;
+        shootCooldown = 500;
+    }
+
+    // ============================
+    // Shop (upgrade na elke ronde)
+    // ============================
+    function showShop() {
+        inShop = true;
+        shopScoreText.textContent = score;
+        shopScreen.style.display = 'flex';
+        // Enable of disable knoppen op basis van score
+        updateShopButtons();
+    }
+
+    function hideShop() {
+        inShop = false;
+        shopScreen.style.display = 'none';
+        // Voor de doorgaande game-loop resetten we lastTime
+        lastTime = Date.now();
+        requestAnimationFrame(animate);
+    }
+
+    function updateShopButtons() {
+        buyMoveBtn.disabled = (score < 50);
+        buyShootBtn.disabled = (score < 75);
+        buyTurretBtn.disabled = (score < 100);
+        buyMoveBtn.style.opacity = buyMoveBtn.disabled ? 0.5 : 1.0;
+        buyShootBtn.style.opacity = buyShootBtn.disabled ? 0.5 : 1.0;
+        buyTurretBtn.style.opacity = buyTurretBtn.disabled ? 0.5 : 1.0;
+    }
+
+    buyMoveBtn.addEventListener('click', () => {
+        if (score >= 50) {
+            score -= 50;
+            overlayScore.textContent = score;
+            player.speed += 1; // verhoog beweging
+            shopScoreText.textContent = score;
+            updateShopButtons();
+        }
+    });
+
+    buyShootBtn.addEventListener('click', () => {
+        if (score >= 75) {
+            score -= 75;
+            overlayScore.textContent = score;
+            shootCooldown = Math.max(100, shootCooldown - 100); // verminder cooldown, min 100ms
+            shopScoreText.textContent = score;
+            updateShopButtons();
+        }
+    });
+
+    buyTurretBtn.addEventListener('click', () => {
+        if (score >= 100) {
+            score -= 100;
+            overlayScore.textContent = score;
+            shopScoreText.textContent = score;
+            // Plaats een turret op een willekeurige x-coördinaat aan de onderkant
+            const turretWidth = 20;
+            const turretHeight = 20;
+            const x = Math.random() * (canvasWidth - turretWidth);
+            const y = canvasHeight - turretHeight - 10;
+            turrets.push({
+                x,
+                y,
+                width: turretWidth,
+                height: turretHeight,
+                color: '#00ff00',
+                shootInterval: 1500, // schiet elke 1,5 seconde
+                lastShoot: Date.now()
+            });
+            updateShopButtons();
+        }
+    });
+
+    continueBtn.addEventListener('click', () => {
+        // Ga naar volgende golf
+        level++;
+        overlayLevel.textContent = level;
+        enemiesPerWave += 2; // meer vijanden per wave
+        enemiesSpawnedThisWave = 0;
+        lastEnemySpawn = 0;
+        waveCleared = false;
+        hideShop();
     });
 
     // ============================
@@ -361,7 +558,7 @@
     // ============================
     let lastTime = 0;
     function animate(timestamp) {
-        if (gameOver) return;
+        if (gameOver || inShop) return;
         const deltaTime = timestamp - lastTime;
         lastTime = timestamp;
 
@@ -372,6 +569,8 @@
         movePlayer();
         drawPlayer();
         updateBullets();
+        updateTurrets();
+        updateTurretBullets();
         updateEnemies(deltaTime);
 
         requestAnimationFrame(animate);
@@ -379,7 +578,6 @@
 
     // Start de game-loop
     animate(0);
-
     </script>
 </body>
 </html>
