@@ -2,434 +2,234 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Canvas Racing Game with Upgrades</title>
+  <title>Top-Down Racing Game</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
     body {
-      background: #333;
-      font-family: Arial, sans-serif;
-      color: #fff;
+      margin: 0;
+      background: #222;
       overflow: hidden;
-      user-select: none;
+      font-family: sans-serif;
     }
     #gameCanvas {
       display: block;
       margin: 0 auto;
       background: #555;
-      border: 4px solid #222;
     }
-    /* Shop overlay */
-    #shop {
+    #shop, #gameOverText {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(20, 20, 20, 0.95);
-      border: 2px solid #444;
+      background: rgba(0,0,0,0.8);
+      color: white;
       padding: 20px;
-      width: 360px;
-      text-align: center;
       border-radius: 8px;
+      text-align: center;
     }
-    #shop h2 {
-      margin-bottom: 10px;
-      font-size: 24px;
-    }
-    #shop .points {
-      margin-bottom: 15px;
-      font-size: 18px;
-    }
-    #shop .upgrade-item {
-      margin: 10px 0;
-    }
-    #shop button {
-      padding: 8px 12px;
-      margin-left: 10px;
+    #shop button, #gameOverText button {
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 14px;
       background: #28a745;
       border: none;
-      border-radius: 4px;
-      color: #fff;
+      color: white;
       cursor: pointer;
-      font-size: 14px;
+      border-radius: 4px;
     }
     #shop button:disabled {
-      background: #555;
-      cursor: default;
-    }
-    #shop #startRace {
-      margin-top: 20px;
-      background: #007bff;
-      width: 100%;
-    }
-    #gameOverText {
-      position: absolute;
-      top: 40%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.7);
-      padding: 20px;
-      border-radius: 6px;
-      display: none;
-      text-align: center;
-    }
-    #gameOverText h3 {
-      margin-bottom: 12px;
-      font-size: 26px;
-      color: #f00;
-    }
-    #gameOverText button {
-      padding: 8px 12px;
-      background: #ffc107;
-      border: none;
-      border-radius: 4px;
-      color: #000;
-      cursor: pointer;
+      background: #777;
+      cursor: not-allowed;
     }
   </style>
 </head>
 <body>
-  <!-- Shop Overlay -->
-  <div id="shop">
-    <h2>Upgrade Shop</h2>
-    <div class="points">Points: <span id="pointsDisplay">0</span></div>
-    <div class="upgrade-item">
-      <span>Engine (+Speed):</span>
-      <span>Cost: 200</span>
-      <button id="buyEngine">Buy</button>
-    </div>
-    <div class="upgrade-item">
-      <span>Handling (+Control):</span>
-      <span>Cost: 150</span>
-      <button id="buyHandling">Buy</button>
-    </div>
-    <div class="upgrade-item">
-      <span>Turbo (+Accel):</span>
-      <span>Cost: 100</span>
-      <button id="buyTurbo">Buy</button>
-    </div>
-    <button id="startRace">Start Race</button>
+
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<div id="shop">
+  <h2>Upgrade Shop</h2>
+  <p>Points: <span id="pointsDisplay">0</span></p>
+  <div>
+    <p>Engine (+Speed) - 200 pts <button id="buyEngine">Buy</button></p>
+    <p>Handling (+Control) - 150 pts <button id="buyHandling">Buy</button></p>
+    <p>Turbo (+Accel) - 100 pts <button id="buyTurbo">Buy</button></p>
   </div>
+  <button id="startRace">Start Race</button>
+</div>
 
-  <!-- Canvas -->
-  <canvas id="gameCanvas" width="800" height="600"></canvas>
+<div id="gameOverText" style="display:none;">
+  <h2>Game Over!</h2>
+  <p>Distance: <span id="finalDistance">0</span></p>
+  <button id="restartBtn">Return to Shop</button>
+</div>
 
-  <!-- Game Over Overlay -->
-  <div id="gameOverText">
-    <h3>Game Over!</h3>
-    <div>Distance: <span id="finalDistance">0</span></div>
-    <button id="restartBtn">Return to Shop</button>
-  </div>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width;
+const H = canvas.height;
 
-  <script>
-    // ----------- Global Variables -----------
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+// Road
+const ROAD_WIDTH = W * 0.6;
+const ROAD_LEFT = (W - ROAD_WIDTH) / 2;
+const ROAD_RIGHT = ROAD_LEFT + ROAD_WIDTH;
 
-    // Screen dimensions
-    const SCREEN_WIDTH = canvas.width;
-    const SCREEN_HEIGHT = canvas.height;
+// Car
+const CAR_WIDTH = 40;
+const CAR_HEIGHT = 60;
+let player = {
+  x: W / 2 - CAR_WIDTH / 2,
+  y: H / 2,
+  speed: 0,
+  maxSpeed: 6,
+  accel: 0.2,
+  handling: 4
+};
 
-    // Road parameters
-    const ROAD_WIDTH = SCREEN_WIDTH * 0.6;  // 60% of screen
-    const ROAD_LEFT = (SCREEN_WIDTH - ROAD_WIDTH) / 2;
-    const ROAD_RIGHT = ROAD_LEFT + ROAD_WIDTH;
-    const CENTER_X = SCREEN_WIDTH / 2;
-    const LINE_WIDTH = ROAD_WIDTH * 0.02;
-    const DASH_HEIGHT = 30;
-    const DASH_SPACING = 20;
+// Game state
+let keys = {};
+let scrollY = 0;
+let distance = 0;
+let points = 0;
+let gameState = "shop";
 
-    // Car parameters
-    const CAR_WIDTH = 40;
-    const CAR_HEIGHT = 60;
-    const START_X = CENTER_X - CAR_WIDTH / 2;
-    const START_Y = SCREEN_HEIGHT - CAR_HEIGHT - 20;
+// Upgrades
+const upgrades = {
+  engine: { cost: 200, bought: false, apply: () => player.maxSpeed += 2 },
+  handling: { cost: 150, bought: false, apply: () => player.handling += 1.5 },
+  turbo: { cost: 100, bought: false, apply: () => player.accel += 0.1 }
+};
 
-    // Game state
-    let gameState = 'shop'; // 'shop', 'playing', 'gameover'
+// DOM
+const shop = document.getElementById('shop');
+const gameOverText = document.getElementById('gameOverText');
+const finalDistance = document.getElementById('finalDistance');
+const pointsDisplay = document.getElementById('pointsDisplay');
+document.getElementById('buyEngine').onclick = () => buyUpgrade('engine');
+document.getElementById('buyHandling').onclick = () => buyUpgrade('handling');
+document.getElementById('buyTurbo').onclick = () => buyUpgrade('turbo');
+document.getElementById('startRace').onclick = startGame;
+document.getElementById('restartBtn').onclick = () => {
+  gameState = "shop";
+  shop.style.display = 'block';
+  gameOverText.style.display = 'none';
+  updateShop();
+};
 
-    // Player stats and upgrades
-    const baseStats = {
-      maxSpeed: 6,      // pixels per frame
-      accel: 0.2,       // increase per frame
-      handling: 4       // lateral pixels per frame
-    };
-    let playerStats = { ...baseStats };
-    let points = 0;
+function updateShop() {
+  pointsDisplay.textContent = points;
+  for (let key in upgrades) {
+    const btn = document.getElementById('buy' + capitalize(key));
+    btn.disabled = points < upgrades[key].cost || upgrades[key].bought;
+    if (upgrades[key].bought) btn.textContent = 'Owned';
+  }
+}
+function buyUpgrade(name) {
+  if (points >= upgrades[name].cost && !upgrades[name].bought) {
+    points -= upgrades[name].cost;
+    upgrades[name].bought = true;
+    upgrades[name].apply();
+    updateShop();
+  }
+}
+function capitalize(str) {
+  return str[0].toUpperCase() + str.slice(1);
+}
 
-    // Upgrade costs and multipliers
-    const upgrades = {
-      engine: { cost: 200, bought: false, effect: () => playerStats.maxSpeed += 2 },
-      handling: { cost: 150, bought: false, effect: () => playerStats.handling += 1.5 },
-      turbo: { cost: 100, bought: false, effect: () => playerStats.accel += 0.1 }
-    };
+function startGame() {
+  gameState = "playing";
+  shop.style.display = 'none';
+  player.x = W / 2 - CAR_WIDTH / 2;
+  player.y = H - CAR_HEIGHT - 20;
+  player.speed = 0;
+  distance = 0;
+  scrollY = 0;
+  loop();
+}
 
-    // Car object
-    const playerCar = {
-      x: START_X,
-      y: START_Y,
-      width: CAR_WIDTH,
-      height: CAR_HEIGHT,
-      color: '#ff0000',
-      speed: 0
-    };
+// Game loop
+function loop() {
+  if (gameState !== "playing") return;
 
-    // Track scroll offset
-    let scrollOffset = 0;
+  // Update input
+  if (keys['ArrowLeft']) player.x -= player.handling;
+  if (keys['ArrowRight']) player.x += player.handling;
+  if (keys['ArrowUp']) {
+    player.speed += player.accel;
+    if (player.speed > player.maxSpeed) player.speed = player.maxSpeed;
+  } else {
+    player.speed -= player.accel * 0.5;
+    if (player.speed < 0) player.speed = 0;
+  }
 
-    // Distance traveled (for scoring)
-    let distance = 0;
+  player.y -= player.speed;
+  distance += player.speed;
 
-    // Key input state
-    const keys = {
-      ArrowLeft: false,
-      ArrowRight: false,
-      ArrowUp: false,
-      ArrowDown: false
-    };
+  // Check bounds
+  if (player.x < ROAD_LEFT || player.x + CAR_WIDTH > ROAD_RIGHT || player.y < 0) {
+    endGame();
+    return;
+  }
 
-    // DOM elements
-    const shopDiv = document.getElementById('shop');
-    const pointsDisplay = document.getElementById('pointsDisplay');
-    const buyEngineBtn = document.getElementById('buyEngine');
-    const buyHandlingBtn = document.getElementById('buyHandling');
-    const buyTurboBtn = document.getElementById('buyTurbo');
-    const startRaceBtn = document.getElementById('startRace');
-    const gameOverDiv = document.getElementById('gameOverText');
-    const finalDistanceSpan = document.getElementById('finalDistance');
-    const restartBtn = document.getElementById('restartBtn');
+  // Clear
+  ctx.clearRect(0, 0, W, H);
 
-    // ----------- Utility Functions -----------
-    function updatePointsDisplay() {
-      pointsDisplay.textContent = points;
-      buyEngineBtn.disabled = points < upgrades.engine.cost || upgrades.engine.bought;
-      buyHandlingBtn.disabled = points < upgrades.handling.cost || upgrades.handling.bought;
-      buyTurboBtn.disabled = points < upgrades.turbo.cost || upgrades.turbo.bought;
+  // Draw road
+  ctx.fillStyle = "#1a7e17";
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#555";
+  ctx.fillRect(ROAD_LEFT, 0, ROAD_WIDTH, H);
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(ROAD_LEFT, 0);
+  ctx.lineTo(ROAD_LEFT, H);
+  ctx.moveTo(ROAD_RIGHT, 0);
+  ctx.lineTo(ROAD_RIGHT, H);
+  ctx.stroke();
 
-      // Gray out bought items
-      if (upgrades.engine.bought) buyEngineBtn.textContent = 'Owned';
-      if (upgrades.handling.bought) buyHandlingBtn.textContent = 'Owned';
-      if (upgrades.turbo.bought) buyTurboBtn.textContent = 'Owned';
-    }
+  // Dashed center line
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([20, 15]);
+  ctx.beginPath();
+  ctx.moveTo(W / 2, 0);
+  ctx.lineTo(W / 2, H);
+  ctx.stroke();
+  ctx.setLineDash([]);
 
-    // Draw a single frame of the scrolling road
-    function drawRoad() {
-      // Grass
-      ctx.fillStyle = '#1a7e17';
-      ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  // Draw car
+  ctx.fillStyle = "#ff0000";
+  ctx.fillRect(player.x, player.y, CAR_WIDTH, CAR_HEIGHT);
+  ctx.fillStyle = "#99d9ea";
+  ctx.fillRect(player.x + 10, player.y + 10, 20, 20);
 
-      // Road
-      ctx.fillStyle = '#555';
-      ctx.fillRect(ROAD_LEFT, 0, ROAD_WIDTH, SCREEN_HEIGHT);
+  requestAnimationFrame(loop);
+}
 
-      // Road edges
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(ROAD_LEFT, 0);
-      ctx.lineTo(ROAD_LEFT, SCREEN_HEIGHT);
-      ctx.moveTo(ROAD_RIGHT, 0);
-      ctx.lineTo(ROAD_RIGHT, SCREEN_HEIGHT);
-      ctx.stroke();
+function endGame() {
+  gameState = "gameover";
+  const earned = Math.floor(distance / 10);
+  points += earned;
+  finalDistance.textContent = Math.floor(distance);
+  gameOverText.style.display = 'block';
+  updateShop();
+}
 
-      // Center dashed line
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = LINE_WIDTH;
-      let totalDashLen = DASH_HEIGHT + DASH_SPACING;
-      let yOffset = scrollOffset % totalDashLen;
+// Controls
+document.addEventListener('keydown', e => {
+  keys[e.key] = true;
+});
+document.addEventListener('keyup', e => {
+  keys[e.key] = false;
+});
 
-      for (let y = -yOffset; y < SCREEN_HEIGHT; y += totalDashLen) {
-        ctx.beginPath();
-        ctx.moveTo(CENTER_X, y);
-        ctx.lineTo(CENTER_X, y + DASH_HEIGHT);
-        ctx.stroke();
-      }
-    }
+// Draw static screen initially
+updateShop();
+ctx.fillStyle = "#fff";
+ctx.font = "20px sans-serif";
+ctx.fillText("Racing Game Loaded - Open Shop to Begin", 200, 300);
+</script>
 
-    // Draw the player's car
-    function drawCar() {
-      ctx.fillStyle = playerCar.color;
-      ctx.fillRect(playerCar.x, playerCar.y, playerCar.width, playerCar.height);
-      // Optional: add simple windshield
-      ctx.fillStyle = '#99d9ea';
-      ctx.fillRect(
-        playerCar.x + playerCar.width * 0.25,
-        playerCar.y + playerCar.height * 0.1,
-        playerCar.width * 0.5,
-        playerCar.height * 0.3
-      );
-    }
-
-    // Handle keyboard input
-    function handleInput() {
-      // Lateral movement
-      if (keys.ArrowLeft) {
-        playerCar.x -= playerStats.handling;
-      }
-      if (keys.ArrowRight) {
-        playerCar.x += playerStats.handling;
-      }
-      // Keep car within screen bounds
-      // But only count off-road if beyond ROAD_LEFT and ROAD_RIGHT
-      if (playerCar.x < 0) playerCar.x = 0;
-      if (playerCar.x + playerCar.width > SCREEN_WIDTH) {
-        playerCar.x = SCREEN_WIDTH - playerCar.width;
-      }
-
-      // Vertical acceleration & braking (optional: let up/down slightly adjust speed)
-      if (keys.ArrowUp) {
-        playerCar.speed += playerStats.accel;
-        if (playerCar.speed > playerStats.maxSpeed) {
-          playerCar.speed = playerStats.maxSpeed;
-        }
-      } else if (keys.ArrowDown) {
-        playerCar.speed -= playerStats.accel * 1.2;
-        if (playerCar.speed < 0) {
-          playerCar.speed = 0;
-        }
-      } else {
-        // natural deceleration
-        playerCar.speed -= playerStats.accel * 0.5;
-        if (playerCar.speed < 0) playerCar.speed = 0;
-      }
-    }
-
-    // Check collision with road boundaries
-    function checkCollision() {
-      if (
-        playerCar.x < ROAD_LEFT ||
-        playerCar.x + playerCar.width > ROAD_RIGHT
-      ) {
-        return true;
-      }
-      return false;
-    }
-
-    // Main game loop
-    function gameLoop() {
-      if (gameState !== 'playing') return;
-
-      // Update
-      handleInput();
-      scrollOffset += playerCar.speed;
-      distance += playerCar.speed * 0.1;
-
-      // Draw
-      drawRoad();
-      drawCar();
-
-      // Check collision
-      if (checkCollision()) {
-        endGame();
-        return;
-      }
-
-      // Request next frame
-      requestAnimationFrame(gameLoop);
-    }
-
-    // Start the race
-    function startRace() {
-      // Reset variables
-      playerCar.x = START_X;
-      playerCar.y = START_Y;
-      playerCar.speed = 0;
-      scrollOffset = 0;
-      distance = 0;
-
-      // Hide shop and game-over messages
-      shopDiv.style.display = 'none';
-      gameOverDiv.style.display = 'none';
-
-      // Set state
-      gameState = 'playing';
-
-      // Start loop
-      requestAnimationFrame(gameLoop);
-    }
-
-    // End the race (when collision)
-    function endGame() {
-      gameState = 'gameover';
-      // Award points: 1 point per 10 units of distance
-      const earned = Math.floor(distance / 10);
-      points += earned;
-      finalDistanceSpan.textContent = Math.floor(distance);
-      updatePointsDisplay();
-      gameOverDiv.style.display = 'block';
-    }
-
-    // Return to shop
-    function returnToShop() {
-      gameState = 'shop';
-      shopDiv.style.display = 'block';
-      gameOverDiv.style.display = 'none';
-    }
-
-    // ----------- Event Listeners -----------
-    window.addEventListener('keydown', (e) => {
-      if (e.code in keys) {
-        keys[e.code] = true;
-      }
-      // Prevent arrow keys from scrolling
-      if (
-        e.code === 'ArrowUp' ||
-        e.code === 'ArrowDown' ||
-        e.code === 'ArrowLeft' ||
-        e.code === 'ArrowRight'
-      ) {
-        e.preventDefault();
-      }
-    });
-    window.addEventListener('keyup', (e) => {
-      if (e.code in keys) {
-        keys[e.code] = false;
-      }
-    });
-
-    buyEngineBtn.addEventListener('click', () => {
-      if (points >= upgrades.engine.cost && !upgrades.engine.bought) {
-        points -= upgrades.engine.cost;
-        upgrades.engine.bought = true;
-        upgrades.engine.effect();
-        updatePointsDisplay();
-      }
-    });
-    buyHandlingBtn.addEventListener('click', () => {
-      if (points >= upgrades.handling.cost && !upgrades.handling.bought) {
-        points -= upgrades.handling.cost;
-        upgrades.handling.bought = true;
-        upgrades.handling.effect();
-        updatePointsDisplay();
-      }
-    });
-    buyTurboBtn.addEventListener('click', () => {
-      if (points >= upgrades.turbo.cost && !upgrades.turbo.bought) {
-        points -= upgrades.turbo.cost;
-        upgrades.turbo.bought = true;
-        upgrades.turbo.effect();
-        updatePointsDisplay();
-      }
-    });
-    startRaceBtn.addEventListener('click', () => {
-      startRace();
-    });
-    restartBtn.addEventListener('click', () => {
-      returnToShop();
-    });
-
-    // Initialize points display on load
-    updatePointsDisplay();
-
-    // Initially, draw a static road and car to show the game screen
-    function drawInitialScreen() {
-      drawRoad();
-      drawCar();
-    }
-    drawInitialScreen();
-  </script>
 </body>
 </html>
