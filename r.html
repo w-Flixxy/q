@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>1990s 3D Racing Game</title>
+  <title>1990’s 3D Racing Game met Track</title>
   <style>
     body {
       margin: 0;
@@ -11,6 +11,7 @@
       font-family: 'Courier New', monospace;
       color: #0ff;
     }
+    /* HUD en shop overlays */
     #hud, #shop {
       position: absolute;
       left: 10px;
@@ -31,88 +32,215 @@
       cursor: pointer;
       font-weight: bold;
     }
-    #shop button:hover { background: #4ff; }
-    canvas { display: block; }
+    #shop button:hover {
+      background: #4ff;
+    }
+    canvas {
+      display: block;
+    }
   </style>
 </head>
 <body>
+  <!-- HUD met besturing en stats -->
   <div id="hud">
     <div><strong>Controls:</strong> W/A/S/D</div>
-    <hr style="border-color: #0ff;">
+    <hr style="border-color: #0ff; margin: 4px 0;">
     <div>Max Speed: <span id="statSpeed">6.0</span></div>
-    <div>Acceleration: <span id="statAccel">0.2</span></div>
+    <div>Acceleration: <span id="statAccel">0.20</span></div>
     <div>Handling: <span id="statHandling">2.0</span></div>
   </div>
+
+  <!-- Shop voor onbeperkte upgrades -->
   <div id="shop">
-    <strong>Upgrades</strong><br>
+    <strong>Upgrades (Unlimited)</strong><br>
     <button id="upgradeEngine">Engine +2</button><br>
     <button id="upgradeAccel">Accel +0.05</button><br>
     <button id="upgradeHandling">Handling +0.5</button>
   </div>
+
+  <!-- Three.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
   <script>
+    // ──────────────────────────────────────────────────────────────────────
+    // 1) Scene, camera & renderer
+    // ──────────────────────────────────────────────────────────────────────
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      2000
+    );
+    camera.position.set(0, 10, -15);
+    camera.lookAt(0, 0, 0);
+
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
+    // ──────────────────────────────────────────────────────────────────────
+    // 2) Lichten
+    // ──────────────────────────────────────────────────────────────────────
     const ambientLight = new THREE.AmbientLight(0x222222, 1.5);
     scene.add(ambientLight);
+
     const dirLight = new THREE.DirectionalLight(0x00ffff, 1.2);
     dirLight.position.set(10, 20, 10);
     scene.add(dirLight);
 
-    const gridHelper = new THREE.GridHelper(1000, 100, 0x00ffff, 0x004488);
-    gridHelper.rotation.x = Math.PI / 2;
+    // ──────────────────────────────────────────────────────────────────────
+    // 3) Retro gridvloer (als achtergrond)
+    // ──────────────────────────────────────────────────────────────────────
+    const gridSize = 2000;
+    const gridDiv = 200;
+    const gridHelper = new THREE.GridHelper(gridSize, gridDiv, 0x00ffff, 0x004488);
+    gridHelper.rotation.x = Math.PI / 2; // op X‑vlak draaien
     scene.add(gridHelper);
 
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(1000, 1000),
-      new THREE.MeshBasicMaterial({ color: 0x000000 })
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.01;
-    scene.add(floor);
+    const floorGeom = new THREE.PlaneGeometry(gridSize, gridSize);
+    const floorMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const floorMesh = new THREE.Mesh(floorGeom, floorMat);
+    floorMesh.rotation.x = -Math.PI / 2;
+    floorMesh.position.y = -0.01;
+    scene.add(floorMesh);
 
-    const carGeometry = new THREE.BoxGeometry(1, 0.5, 2);
-    const carMaterial = new THREE.MeshStandardMaterial({ color: 0xff00ff });
-    const car = new THREE.Mesh(carGeometry, carMaterial);
-    car.position.set(0, 0.25, 0);
-    scene.add(car);
+    // ──────────────────────────────────────────────────────────────────────
+    // 4) Track‑materialen en geometrie
+    // ──────────────────────────────────────────────────────────────────────
+    // Grijze baanstukken
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+    // Rode barriers langs de baan
+    const barrierMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
 
-    const player = {
-      pos: new THREE.Vector3(0, 0, 0),
-      maxSpeed: 6.0,
-      accel: 0.2,
-      handling: 2.0
-    };
-
-    let angle = 0;    // richting waarin de auto kijkt
-    let speed = 0;    // voorwaartse snelheid
-
-    const keys = { w: false, a: false, s: false, d: false };
-    window.addEventListener('keydown', e => { if (keys.hasOwnProperty(e.key)) keys[e.key] = true; });
-    window.addEventListener('keyup', e => { if (keys.hasOwnProperty(e.key)) keys[e.key] = false; });
-
-    document.getElementById('upgradeEngine').onclick = () => { player.maxSpeed += 2; updateHUD(); };
-    document.getElementById('upgradeAccel').onclick = () => { player.accel += 0.05; updateHUD(); };
-    document.getElementById('upgradeHandling').onclick = () => { player.handling += 0.5; updateHUD(); };
-
-    function updateHUD() {
-      document.getElementById('statSpeed').textContent = player.maxSpeed.toFixed(1);
-      document.getElementById('statAccel').textContent = player.accel.toFixed(2);
-      document.getElementById('statHandling').textContent = player.handling.toFixed(1);
+    // Functie om een recht stuk track toe te voegen
+    function addRoadSegment(width, length, posX, posZ, rotY = 0) {
+      const geom = new THREE.PlaneGeometry(width, length);
+      const mesh = new THREE.Mesh(geom, roadMat);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.rotation.y = rotY;
+      mesh.position.set(posX, 0, posZ);
+      scene.add(mesh);
+      return mesh;
+    }
+    // Functie om barrier (muur) toe te voegen
+    function addBarrier(width, height, depth, posX, posZ, rotY = 0) {
+      const geom = new THREE.BoxGeometry(width, height, depth);
+      const mesh = new THREE.Mesh(geom, barrierMat);
+      mesh.position.set(posX, height / 2, posZ);
+      mesh.rotation.y = rotY;
+      scene.add(mesh);
+      return mesh;
     }
 
+    // ──────────────── Rechthoekige track ⎯⎯⎯⎯⎯⎯⎯⎯
+    // Parameters track:
+    const trackWidth = 10;
+    const trackLength = 200;
+    const halfLength = trackLength / 2;
+    const halfWidth = trackWidth / 2;
+
+    // 4 baansegmenten (noord, zuid, oost, west)
+    // Noord‐segment (horizontaal bovenaan)
+    addRoadSegment(trackLength, trackWidth, 0, -halfLength);
+    // Zuid‐segment (horizontaal onderaan)
+    addRoadSegment(trackLength, trackWidth, 0, halfLength);
+    // Oost‐segment (verticaal rechts)
+    addRoadSegment(trackWidth, trackLength, halfLength, 0, Math.PI / 2);
+    // West‐segment (verticaal links)
+    addRoadSegment(trackWidth, trackLength, -halfLength, 0, Math.PI / 2);
+
+    // Barriers langs de track (muren; hoogte = 2, dikte = 1)
+    // Noord en zuid muren
+    addBarrier(trackLength + 2, 2, 1, 0, -halfLength - halfWidth, 0); // bovenste muur
+    addBarrier(trackLength + 2, 2, 1, 0, halfLength + halfWidth, 0);  // onderste muur
+    // Oost en west muren
+    addBarrier(1, 2, trackLength + 2, halfLength + halfWidth, 0, 0);   // rechter muur
+    addBarrier(1, 2, trackLength + 2, -halfLength - halfWidth, 0, 0);  // linker muur
+
+    // ──────────────────────────────────────────────────────────────────────
+    // 5) Auto (simpel blok)
+    // ──────────────────────────────────────────────────────────────────────
+    const carWidth = 1;
+    const carHeight = 0.5;
+    const carLength = 2;
+    const carGeom = new THREE.BoxGeometry(carWidth, carHeight, carLength);
+    const carMat = new THREE.MeshStandardMaterial({ color: 0xff00ff });
+    const car = new THREE.Mesh(carGeom, carMat);
+    // Startpositie: in het midden van het zuidelijke baansegment
+    car.position.set(0, carHeight / 2, halfLength - (trackWidth / 2));
+    scene.add(car);
+
+    // ──────────────────────────────────────────────────────────────────────
+    // 6) Speler‐variabelen & stats
+    // ──────────────────────────────────────────────────────────────────────
+    const player = {
+      pos: car.position.clone(), // Houdt positie bij in een Vector3
+      maxSpeed: 6.0,
+      accel: 0.20,
+      handling: 2.0
+    };
+    let angle = Math.PI; // Start “naar het noorden” (positieve Z‐richting op track)
+    let speed = 0;
+
+    // HUD‐elementen referenties
+    const statSpeedEl = document.getElementById('statSpeed');
+    const statAccelEl = document.getElementById('statAccel');
+    const statHandlingEl = document.getElementById('statHandling');
+
+    function updateHUD() {
+      statSpeedEl.textContent = player.maxSpeed.toFixed(1);
+      statAccelEl.textContent = player.accel.toFixed(2);
+      statHandlingEl.textContent = player.handling.toFixed(1);
+    }
+    updateHUD();
+
+    // ──────────────────────────────────────────────────────────────────────
+    // 7) Input (W/A/S/D)
+    // ──────────────────────────────────────────────────────────────────────
+    const keys = { w: false, a: false, s: false, d: false };
+    window.addEventListener('keydown', e => {
+      const k = e.key.toLowerCase();
+      if (keys.hasOwnProperty(k)) {
+        keys[k] = true;
+        e.preventDefault();
+      }
+    });
+    window.addEventListener('keyup', e => {
+      const k = e.key.toLowerCase();
+      if (keys.hasOwnProperty(k)) {
+        keys[k] = false;
+        e.preventDefault();
+      }
+    });
+
+    // ──────────────────────────────────────────────────────────────────────
+    // 8) Upgrade‐knoppen
+    // ──────────────────────────────────────────────────────────────────────
+    document.getElementById('upgradeEngine').onclick = () => {
+      player.maxSpeed += 2;
+      updateHUD();
+    };
+    document.getElementById('upgradeAccel').onclick = () => {
+      player.accel += 0.05;
+      updateHUD();
+    };
+    document.getElementById('upgradeHandling').onclick = () => {
+      player.handling += 0.5;
+      updateHUD();
+    };
+
+    // ──────────────────────────────────────────────────────────────────────
+    // 9) Animatielus & beweging
+    // ──────────────────────────────────────────────────────────────────────
     const clock = new THREE.Clock();
 
     function animate() {
       requestAnimationFrame(animate);
       const delta = clock.getDelta();
 
-      // Beweging
+      // A) Versnelling / vertraging
       if (keys.w) {
         speed += player.accel;
         if (speed > player.maxSpeed) speed = player.maxSpeed;
@@ -120,11 +248,12 @@
         speed -= player.accel;
         if (speed < -player.maxSpeed) speed = -player.maxSpeed;
       } else {
+        // Natuurlijke demping
         speed *= 0.94;
         if (Math.abs(speed) < 0.01) speed = 0;
       }
 
-      // Rotatie
+      // B) Rotatie (sturen)
       if (keys.a) {
         angle += player.handling * delta;
       }
@@ -132,30 +261,42 @@
         angle -= player.handling * delta;
       }
 
-      // Nieuwe positie berekenen op basis van heading
+      // C) Nieuwe positie berekenen: langs heading
       player.pos.x += Math.sin(angle) * speed * delta;
       player.pos.z += Math.cos(angle) * speed * delta;
 
-      // Auto updaten
-      car.position.set(player.pos.x, 0.25, player.pos.z);
+      // D) Binnen track houden (voorkom dat je door de muren rijdt)
+      // Trackgrenzen uit `barrier` posities (±(halfLength+halfWidth))
+      const limit = halfLength + halfWidth - 0.5; // resp. een kleine buffer
+      if (player.pos.x < -limit) player.pos.x = -limit;
+      if (player.pos.x >  limit) player.pos.x =  limit;
+      if (player.pos.z < -limit) player.pos.z = -limit;
+      if (player.pos.z >  limit) player.pos.z =  limit;
+
+      // E) Auto‐mesh updaten: positie + rotatie
+      car.position.set(player.pos.x, carHeight / 2, player.pos.z);
       car.rotation.y = -angle;
 
-      // Camera achter de auto
+      // F) Camera volgt achter de auto (smooth via lerp)
+      // Offset is afhankelijk van de heading (angle)
       const camOffset = new THREE.Vector3(
-        Math.sin(angle) * -10,
-        5,
-        Math.cos(angle) * -10
+        Math.sin(angle) * -15,
+        8,
+        Math.cos(angle) * -15
       );
       const desiredCamPos = new THREE.Vector3().addVectors(car.position, camOffset);
-      camera.position.lerp(desiredCamPos, 0.1);
+      camera.position.lerp(desiredCamPos, 0.08);
       camera.lookAt(car.position);
 
+      // G) Render
       renderer.render(scene, camera);
     }
 
     animate();
-    updateHUD();
 
+    // ──────────────────────────────────────────────────────────────────────
+    // 10) Responsieve vensteraanpassing
+    // ──────────────────────────────────────────────────────────────────────
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
