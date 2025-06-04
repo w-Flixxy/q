@@ -1,307 +1,385 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <title>1990’s 3D Racing Game met Track</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: #000;
-      font-family: 'Courier New', monospace;
-      color: #0ff;
-    }
-    /* HUD en shop overlays */
-    #hud, #shop {
-      position: absolute;
-      left: 10px;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 8px;
-      border: 1px solid #0ff;
-      font-size: 14px;
-      line-height: 1.4em;
-    }
-    #hud { top: 10px; }
-    #shop { bottom: 10px; }
-    #shop button {
-      background: #0ff;
-      border: none;
-      color: #000;
-      padding: 6px 10px;
-      margin: 4px 0;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    #shop button:hover {
-      background: #4ff;
-    }
-    canvas {
-      display: block;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sigma Sooper Duper Shooter</title>
+    <style>
+        /* CSS-reset en body-stijlen */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #111;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+        #gameCanvas {
+            display: block;
+            margin: 0 auto;
+            background: #222;
+            border: 2px solid #444;
+        }
+        #overlay {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 18px;
+        }
+        #overlay div {
+            margin: 5px 0;
+        }
+        #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: #fff;
+            font-size: 32px;
+            display: none;
+        }
+        #gameOverScreen button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            background: #ff4444;
+            border: none;
+            color: #fff;
+            border-radius: 4px;
+        }
+        #gameOverScreen button:hover {
+            background: #ff2222;
+        }
+    </style>
 </head>
 <body>
-  <!-- HUD met besturing en stats -->
-  <div id="hud">
-    <div><strong>Controls:</strong> W/A/S/D</div>
-    <hr style="border-color: #0ff; margin: 4px 0;">
-    <div>Max Speed: <span id="statSpeed">6.0</span></div>
-    <div>Acceleration: <span id="statAccel">0.20</span></div>
-    <div>Handling: <span id="statHandling">2.0</span></div>
-  </div>
+    <!-- Canvas waarin de game getekend wordt -->
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
 
-  <!-- Shop voor onbeperkte upgrades -->
-  <div id="shop">
-    <strong>Upgrades (Unlimited)</strong><br>
-    <button id="upgradeEngine">Engine +2</button><br>
-    <button id="upgradeAccel">Accel +0.05</button><br>
-    <button id="upgradeHandling">Handling +0.5</button>
-  </div>
+    <!-- Overlay voor score, levens, level -->
+    <div id="overlay">
+        <div>Score: <span id="score">0</span></div>
+        <div>Levens: <span id="lives">3</span></div>
+        <div>Level: <span id="level">1</span></div>
+    </div>
 
-  <!-- Three.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
-  <script>
-    // ──────────────────────────────────────────────────────────────────────
-    // 1) Scene, camera & renderer
-    // ──────────────────────────────────────────────────────────────────────
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000);
+    <!-- Game-over scherm -->
+    <div id="gameOverScreen">
+        <div>GAME OVER</div>
+        <div>Eindscore: <span id="finalScore">0</span></div>
+        <button id="restartBtn">Opnieuw Spelen</button>
+    </div>
 
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      2000
-    );
-    camera.position.set(0, 10, -15);
-    camera.lookAt(0, 0, 0);
+    <script>
+    // ============================
+    // Spelvariabelen en instellingen
+    // ============================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+    const overlayScore = document.getElementById('score');
+    const overlayLives = document.getElementById('lives');
+    const overlayLevel = document.getElementById('level');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const finalScoreText = document.getElementById('finalScore');
+    const restartBtn = document.getElementById('restartBtn');
 
-    // ──────────────────────────────────────────────────────────────────────
-    // 2) Lichten
-    // ──────────────────────────────────────────────────────────────────────
-    const ambientLight = new THREE.AmbientLight(0x222222, 1.5);
-    scene.add(ambientLight);
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
 
-    const dirLight = new THREE.DirectionalLight(0x00ffff, 1.2);
-    dirLight.position.set(10, 20, 10);
-    scene.add(dirLight);
+    let keysPressed = {};
 
-    // ──────────────────────────────────────────────────────────────────────
-    // 3) Retro gridvloer (als achtergrond)
-    // ──────────────────────────────────────────────────────────────────────
-    const gridSize = 2000;
-    const gridDiv = 200;
-    const gridHelper = new THREE.GridHelper(gridSize, gridDiv, 0x00ffff, 0x004488);
-    gridHelper.rotation.x = Math.PI / 2; // op X‑vlak draaien
-    scene.add(gridHelper);
-
-    const floorGeom = new THREE.PlaneGeometry(gridSize, gridSize);
-    const floorMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-    const floorMesh = new THREE.Mesh(floorGeom, floorMat);
-    floorMesh.rotation.x = -Math.PI / 2;
-    floorMesh.position.y = -0.01;
-    scene.add(floorMesh);
-
-    // ──────────────────────────────────────────────────────────────────────
-    // 4) Track‑materialen en geometrie
-    // ──────────────────────────────────────────────────────────────────────
-    // Grijze baanstukken
-    const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
-    // Rode barriers langs de baan
-    const barrierMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-
-    // Functie om een recht stuk track toe te voegen
-    function addRoadSegment(width, length, posX, posZ, rotY = 0) {
-      const geom = new THREE.PlaneGeometry(width, length);
-      const mesh = new THREE.Mesh(geom, roadMat);
-      mesh.rotation.x = -Math.PI / 2;
-      mesh.rotation.y = rotY;
-      mesh.position.set(posX, 0, posZ);
-      scene.add(mesh);
-      return mesh;
-    }
-    // Functie om barrier (muur) toe te voegen
-    function addBarrier(width, height, depth, posX, posZ, rotY = 0) {
-      const geom = new THREE.BoxGeometry(width, height, depth);
-      const mesh = new THREE.Mesh(geom, barrierMat);
-      mesh.position.set(posX, height / 2, posZ);
-      mesh.rotation.y = rotY;
-      scene.add(mesh);
-      return mesh;
-    }
-
-    // ──────────────── Rechthoekige track ⎯⎯⎯⎯⎯⎯⎯⎯
-    // Parameters track:
-    const trackWidth = 10;
-    const trackLength = 200;
-    const halfLength = trackLength / 2;
-    const halfWidth = trackWidth / 2;
-
-    // 4 baansegmenten (noord, zuid, oost, west)
-    // Noord‐segment (horizontaal bovenaan)
-    addRoadSegment(trackLength, trackWidth, 0, -halfLength);
-    // Zuid‐segment (horizontaal onderaan)
-    addRoadSegment(trackLength, trackWidth, 0, halfLength);
-    // Oost‐segment (verticaal rechts)
-    addRoadSegment(trackWidth, trackLength, halfLength, 0, Math.PI / 2);
-    // West‐segment (verticaal links)
-    addRoadSegment(trackWidth, trackLength, -halfLength, 0, Math.PI / 2);
-
-    // Barriers langs de track (muren; hoogte = 2, dikte = 1)
-    // Noord en zuid muren
-    addBarrier(trackLength + 2, 2, 1, 0, -halfLength - halfWidth, 0); // bovenste muur
-    addBarrier(trackLength + 2, 2, 1, 0, halfLength + halfWidth, 0);  // onderste muur
-    // Oost en west muren
-    addBarrier(1, 2, trackLength + 2, halfLength + halfWidth, 0, 0);   // rechter muur
-    addBarrier(1, 2, trackLength + 2, -halfLength - halfWidth, 0, 0);  // linker muur
-
-    // ──────────────────────────────────────────────────────────────────────
-    // 5) Auto (simpel blok)
-    // ──────────────────────────────────────────────────────────────────────
-    const carWidth = 1;
-    const carHeight = 0.5;
-    const carLength = 2;
-    const carGeom = new THREE.BoxGeometry(carWidth, carHeight, carLength);
-    const carMat = new THREE.MeshStandardMaterial({ color: 0xff00ff });
-    const car = new THREE.Mesh(carGeom, carMat);
-    // Startpositie: in het midden van het zuidelijke baansegment
-    car.position.set(0, carHeight / 2, halfLength - (trackWidth / 2));
-    scene.add(car);
-
-    // ──────────────────────────────────────────────────────────────────────
-    // 6) Speler‐variabelen & stats
-    // ──────────────────────────────────────────────────────────────────────
+    // Spelerobject
     const player = {
-      pos: car.position.clone(), // Houdt positie bij in een Vector3
-      maxSpeed: 6.0,
-      accel: 0.20,
-      handling: 2.0
-    };
-    let angle = Math.PI; // Start “naar het noorden” (positieve Z‐richting op track)
-    let speed = 0;
-
-    // HUD‐elementen referenties
-    const statSpeedEl = document.getElementById('statSpeed');
-    const statAccelEl = document.getElementById('statAccel');
-    const statHandlingEl = document.getElementById('statHandling');
-
-    function updateHUD() {
-      statSpeedEl.textContent = player.maxSpeed.toFixed(1);
-      statAccelEl.textContent = player.accel.toFixed(2);
-      statHandlingEl.textContent = player.handling.toFixed(1);
-    }
-    updateHUD();
-
-    // ──────────────────────────────────────────────────────────────────────
-    // 7) Input (W/A/S/D)
-    // ──────────────────────────────────────────────────────────────────────
-    const keys = { w: false, a: false, s: false, d: false };
-    window.addEventListener('keydown', e => {
-      const k = e.key.toLowerCase();
-      if (keys.hasOwnProperty(k)) {
-        keys[k] = true;
-        e.preventDefault();
-      }
-    });
-    window.addEventListener('keyup', e => {
-      const k = e.key.toLowerCase();
-      if (keys.hasOwnProperty(k)) {
-        keys[k] = false;
-        e.preventDefault();
-      }
-    });
-
-    // ──────────────────────────────────────────────────────────────────────
-    // 8) Upgrade‐knoppen
-    // ──────────────────────────────────────────────────────────────────────
-    document.getElementById('upgradeEngine').onclick = () => {
-      player.maxSpeed += 2;
-      updateHUD();
-    };
-    document.getElementById('upgradeAccel').onclick = () => {
-      player.accel += 0.05;
-      updateHUD();
-    };
-    document.getElementById('upgradeHandling').onclick = () => {
-      player.handling += 0.5;
-      updateHUD();
+        x: canvasWidth / 2,
+        y: canvasHeight - 60,
+        width: 40,
+        height: 40,
+        speed: 4,
+        color: '#00ccff',
+        lives: 3,
+        invincible: false,
+        invincibleTimer: 0
     };
 
-    // ──────────────────────────────────────────────────────────────────────
-    // 9) Animatielus & beweging
-    // ──────────────────────────────────────────────────────────────────────
-    const clock = new THREE.Clock();
+    // Schoten van de speler
+    const bullets = [];
 
-    function animate() {
-      requestAnimationFrame(animate);
-      const delta = clock.getDelta();
+    // Vijanden
+    let enemies = [];
+    let enemySpawnInterval = 2000; // in ms
+    let lastEnemySpawn = 0;
+    let enemiesPerWave = 5;
+    let enemiesSpawnedThisWave = 0;
+    let waveCleared = false;
 
-      // A) Versnelling / vertraging
-      if (keys.w) {
-        speed += player.accel;
-        if (speed > player.maxSpeed) speed = player.maxSpeed;
-      } else if (keys.s) {
-        speed -= player.accel;
-        if (speed < -player.maxSpeed) speed = -player.maxSpeed;
-      } else {
-        // Natuurlijke demping
-        speed *= 0.94;
-        if (Math.abs(speed) < 0.01) speed = 0;
-      }
+    // Projectielen van vijanden (optioneel: maak het complexer)
+    const enemyBullets = [];
 
-      // B) Rotatie (sturen)
-      if (keys.a) {
-        angle += player.handling * delta;
-      }
-      if (keys.d) {
-        angle -= player.handling * delta;
-      }
+    // Score en level
+    let score = 0;
+    let level = 1;
 
-      // C) Nieuwe positie berekenen: langs heading
-      player.pos.x += Math.sin(angle) * speed * delta;
-      player.pos.z += Math.cos(angle) * speed * delta;
+    let gameOver = false;
 
-      // D) Binnen track houden (voorkom dat je door de muren rijdt)
-      // Trackgrenzen uit `barrier` posities (±(halfLength+halfWidth))
-      const limit = halfLength + halfWidth - 0.5; // resp. een kleine buffer
-      if (player.pos.x < -limit) player.pos.x = -limit;
-      if (player.pos.x >  limit) player.pos.x =  limit;
-      if (player.pos.z < -limit) player.pos.z = -limit;
-      if (player.pos.z >  limit) player.pos.z =  limit;
-
-      // E) Auto‐mesh updaten: positie + rotatie
-      car.position.set(player.pos.x, carHeight / 2, player.pos.z);
-      car.rotation.y = -angle;
-
-      // F) Camera volgt achter de auto (smooth via lerp)
-      // Offset is afhankelijk van de heading (angle)
-      const camOffset = new THREE.Vector3(
-        Math.sin(angle) * -15,
-        8,
-        Math.cos(angle) * -15
-      );
-      const desiredCamPos = new THREE.Vector3().addVectors(car.position, camOffset);
-      camera.position.lerp(desiredCamPos, 0.08);
-      camera.lookAt(car.position);
-
-      // G) Render
-      renderer.render(scene, camera);
+    // ============================
+    // Hulpfuncties
+    // ============================
+    function drawRect(obj) {
+        ctx.fillStyle = obj.color;
+        ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
     }
 
-    animate();
+    function drawCircle(obj) {
+        ctx.fillStyle = obj.color;
+        ctx.beginPath();
+        ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.fill();
+    }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // 10) Responsieve vensteraanpassing
-    // ──────────────────────────────────────────────────────────────────────
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+    function detectCollision(a, b) {
+        // AABB-collision: rechthoek vs rechthoek
+        return (
+            a.x < b.x + b.width &&
+            a.x + a.width > b.x &&
+            a.y < b.y + b.height &&
+            a.y + a.height > b.y
+        );
+    }
+
+    // ============================
+    // Spelerbesturing
+    // ============================
+    document.addEventListener('keydown', (e) => {
+        keysPressed[e.key] = true;
     });
-  </script>
+    document.addEventListener('keyup', (e) => {
+        keysPressed[e.key] = false;
+    });
+
+    function movePlayer() {
+        if (keysPressed['ArrowLeft'] || keysPressed['a'] || keysPressed['A']) {
+            player.x -= player.speed;
+        }
+        if (keysPressed['ArrowRight'] || keysPressed['d'] || keysPressed['D']) {
+            player.x += player.speed;
+        }
+        if (keysPressed['ArrowUp'] || keysPressed['w'] || keysPressed['W']) {
+            player.y -= player.speed;
+        }
+        if (keysPressed['ArrowDown'] || keysPressed['s'] || keysPressed['S']) {
+            player.y += player.speed;
+        }
+        // Beperk speler binnen canvas
+        if (player.x < 0) player.x = 0;
+        if (player.x + player.width > canvasWidth) player.x = canvasWidth - player.width;
+        if (player.y < 0) player.y = 0;
+        if (player.y + player.height > canvasHeight) player.y = canvasHeight - player.height;
+    }
+
+    // ============================
+    // Schieten door speler
+    // ============================
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault(); // voorkomt scrollen
+            shootBullet();
+        }
+    });
+
+    function shootBullet() {
+        // Beperk aantal schoten tegelijk indien gewenst
+        bullets.push({
+            x: player.x + player.width / 2 - 5,
+            y: player.y,
+            width: 10,
+            height: 20,
+            speed: 7,
+            color: '#ffff66'
+        });
+    }
+
+    function updateBullets() {
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            const b = bullets[i];
+            b.y -= b.speed;
+            // Verwijder schot als het boven canvas uitgaat
+            if (b.y + b.height < 0) {
+                bullets.splice(i, 1);
+                continue;
+            }
+            drawRect(b);
+        }
+    }
+
+    // ============================
+    // Vijanden spawnen en updaten
+    // ============================
+    function spawnEnemy() {
+        const width = 40;
+        const height = 40;
+        const x = Math.random() * (canvasWidth - width);
+        const y = -height; // spawn net buiten top
+        const speed = 1 + Math.random() * 1.5 + level * 0.2;
+        const color = '#ff4444';
+        enemies.push({ x, y, width, height, speed, color });
+    }
+
+    function updateEnemies(deltaTime) {
+        // Spawn logic
+        if (!waveCleared && Date.now() - lastEnemySpawn > enemySpawnInterval && enemiesSpawnedThisWave < enemiesPerWave) {
+            spawnEnemy();
+            enemiesSpawnedThisWave++;
+            lastEnemySpawn = Date.now();
+        }
+        // Als alle vijanden zijn gespawned en geen vijanden meer bestaan => wave voorbij
+        if (enemiesSpawnedThisWave >= enemiesPerWave && enemies.length === 0) {
+            waveCleared = true;
+        }
+        // Als wave voorbij, ga naar volgend level
+        if (waveCleared) {
+            level++;
+            overlayLevel.textContent = level;
+            enemiesPerWave += 2; // meer vijanden per wave
+            enemiesSpawnedThisWave = 0;
+            lastEnemySpawn = 0;
+            waveCleared = false;
+        }
+        // Update en teken elke vijand
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const e = enemies[i];
+            e.y += e.speed;
+            drawRect(e);
+            // Check botsing met speler
+            if (!player.invincible) {
+                if (detectCollision(player, e)) {
+                    handlePlayerHit();
+                    enemies.splice(i, 1);
+                    continue;
+                }
+            }
+            // Als vijand onderkant canvas bereikt => speler raakt gewond en vijand verdwijnt
+            if (e.y > canvasHeight) {
+                handlePlayerHit();
+                enemies.splice(i, 1);
+                continue;
+            }
+            // Check botsing met elke kogel van speler
+            for (let j = bullets.length - 1; j >= 0; j--) {
+                const b = bullets[j];
+                if (detectCollision(b, e)) {
+                    // Verwijder vijand en kogel, verhoog score
+                    enemies.splice(i, 1);
+                    bullets.splice(j, 1);
+                    score += 10;
+                    overlayScore.textContent = score;
+                    break;
+                }
+            }
+        }
+    }
+
+    // ============================
+    // Speler raakt gewond
+    // ============================
+    function handlePlayerHit() {
+        player.lives--;
+        overlayLives.textContent = player.lives;
+        player.invincible = true;
+        player.invincibleTimer = Date.now();
+        if (player.lives <= 0) {
+            endGame();
+        }
+    }
+
+    // ============================
+    // Teken speler (met korte flits bij schade)
+    // ============================
+    function drawPlayer() {
+        if (player.invincible) {
+            const elapsed = Date.now() - player.invincibleTimer;
+            // Blijf 2 seconden onkwetsbaar, met flitsend effect
+            if (elapsed < 2000) {
+                if (Math.floor(elapsed / 100) % 2 === 0) {
+                    // knipperen: niet tekenen
+                    return;
+                }
+            } else {
+                player.invincible = false;
+            }
+        }
+        drawRect(player);
+    }
+
+    // ============================
+    // Game-over logica
+    // ============================
+    function endGame() {
+        gameOver = true;
+        finalScoreText.textContent = score;
+        gameOverScreen.style.display = 'flex';
+    }
+
+    restartBtn.addEventListener('click', () => {
+        // Reset alle variabelen
+        player.x = canvasWidth / 2;
+        player.y = canvasHeight - 60;
+        player.lives = 3;
+        overlayLives.textContent = player.lives;
+        bullets.length = 0;
+        enemies.length = 0;
+        score = 0;
+        level = 1;
+        enemiesPerWave = 5;
+        enemiesSpawnedThisWave = 0;
+        waveCleared = false;
+        overlayScore.textContent = score;
+        overlayLevel.textContent = level;
+        lastEnemySpawn = 0;
+        gameOver = false;
+        player.invincible = false;
+        gameOverScreen.style.display = 'none';
+        animate(0);
+    });
+
+    // ============================
+    // Hoofdlus: animatie en updaten
+    // ============================
+    let lastTime = 0;
+    function animate(timestamp) {
+        if (gameOver) return;
+        const deltaTime = timestamp - lastTime;
+        lastTime = timestamp;
+
+        // Canvas leegmaken
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+        // Updaten
+        movePlayer();
+        drawPlayer();
+        updateBullets();
+        updateEnemies(deltaTime);
+
+        requestAnimationFrame(animate);
+    }
+
+    // Start de game-loop
+    animate(0);
+
+    </script>
 </body>
 </html>
