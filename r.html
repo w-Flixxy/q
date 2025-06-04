@@ -1,235 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Top-Down Racing Game</title>
+  <meta charset="UTF-8">
+  <title>Retro 3D Racing Game</title>
   <style>
     body {
       margin: 0;
-      background: #222;
+      background: #000;
+      font-family: 'Courier New', monospace;
+      color: #0ff;
       overflow: hidden;
-      font-family: sans-serif;
     }
-    #gameCanvas {
-      display: block;
-      margin: 0 auto;
-      background: #555;
-    }
-    #shop, #gameOverText {
+    #info {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.8);
-      color: white;
-      padding: 20px;
-      border-radius: 8px;
-      text-align: center;
-    }
-    #shop button, #gameOverText button {
-      margin-top: 10px;
-      padding: 10px;
+      top: 10px;
+      left: 10px;
       font-size: 14px;
-      background: #28a745;
-      border: none;
-      color: white;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    #shop button:disabled {
-      background: #777;
-      cursor: not-allowed;
+      color: #0ff;
+      background: rgba(0,0,0,0.5);
+      padding: 8px;
+      border: 1px solid #0ff;
     }
   </style>
 </head>
 <body>
+  <div id="info">WASD to drive</div>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"></script>
+  <script>
+    // Scene + Renderer
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000);
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-<canvas id="gameCanvas" width="800" height="600"></canvas>
+    // Lighting
+    const ambient = new THREE.AmbientLight(0x404040, 3);
+    scene.add(ambient);
+    const dirLight = new THREE.DirectionalLight(0x00ffff, 2);
+    dirLight.position.set(10, 20, 10);
+    scene.add(dirLight);
 
-<div id="shop">
-  <h2>Upgrade Shop</h2>
-  <p>Points: <span id="pointsDisplay">0</span></p>
-  <div>
-    <p>Engine (+Speed) - 200 pts <button id="buyEngine">Buy</button></p>
-    <p>Handling (+Control) - 150 pts <button id="buyHandling">Buy</button></p>
-    <p>Turbo (+Accel) - 100 pts <button id="buyTurbo">Buy</button></p>
-  </div>
-  <button id="startRace">Start Race</button>
-</div>
+    // Retro Grid Road
+    const gridSize = 500;
+    const gridDivs = 100;
+    const gridHelper = new THREE.GridHelper(gridSize, gridDivs, 0x00ffff, 0x004488);
+    gridHelper.rotation.x = Math.PI / 2;
+    scene.add(gridHelper);
 
-<div id="gameOverText" style="display:none;">
-  <h2>Game Over!</h2>
-  <p>Distance: <span id="finalDistance">0</span></p>
-  <button id="restartBtn">Return to Shop</button>
-</div>
+    // Car (simple box)
+    const carGeometry = new THREE.BoxGeometry(1, 0.5, 2);
+    const carMaterial = new THREE.MeshStandardMaterial({ color: 0xff00ff });
+    const car = new THREE.Mesh(carGeometry, carMaterial);
+    car.position.y = 0.5;
+    scene.add(car);
 
-<script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const W = canvas.width;
-const H = canvas.height;
+    // Cannon physics
+    const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
 
-// Road
-const ROAD_WIDTH = W * 0.6;
-const ROAD_LEFT = (W - ROAD_WIDTH) / 2;
-const ROAD_RIGHT = ROAD_LEFT + ROAD_WIDTH;
+    const carBody = new CANNON.Body({
+      mass: 1,
+      shape: new CANNON.Box(new CANNON.Vec3(0.5, 0.25, 1)),
+      position: new CANNON.Vec3(0, 0.5, 0),
+      linearDamping: 0.9
+    });
+    world.addBody(carBody);
 
-// Car
-const CAR_WIDTH = 40;
-const CAR_HEIGHT = 60;
-let player = {
-  x: W / 2 - CAR_WIDTH / 2,
-  y: H / 2,
-  speed: 0,
-  maxSpeed: 6,
-  accel: 0.2,
-  handling: 4
-};
+    const groundBody = new CANNON.Body({
+      mass: 0,
+      shape: new CANNON.Plane()
+    });
+    groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+    world.addBody(groundBody);
 
-// Game state
-let keys = {};
-let scrollY = 0;
-let distance = 0;
-let points = 0;
-let gameState = "shop";
+    // Input
+    const keys = {};
+    window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+    window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-// Upgrades
-const upgrades = {
-  engine: { cost: 200, bought: false, apply: () => player.maxSpeed += 2 },
-  handling: { cost: 150, bought: false, apply: () => player.handling += 1.5 },
-  turbo: { cost: 100, bought: false, apply: () => player.accel += 0.1 }
-};
+    // Loop
+    const clock = new THREE.Clock();
 
-// DOM
-const shop = document.getElementById('shop');
-const gameOverText = document.getElementById('gameOverText');
-const finalDistance = document.getElementById('finalDistance');
-const pointsDisplay = document.getElementById('pointsDisplay');
-document.getElementById('buyEngine').onclick = () => buyUpgrade('engine');
-document.getElementById('buyHandling').onclick = () => buyUpgrade('handling');
-document.getElementById('buyTurbo').onclick = () => buyUpgrade('turbo');
-document.getElementById('startRace').onclick = startGame;
-document.getElementById('restartBtn').onclick = () => {
-  gameState = "shop";
-  shop.style.display = 'block';
-  gameOverText.style.display = 'none';
-  updateShop();
-};
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      world.step(1/60, delta, 3);
 
-function updateShop() {
-  pointsDisplay.textContent = points;
-  for (let key in upgrades) {
-    const btn = document.getElementById('buy' + capitalize(key));
-    btn.disabled = points < upgrades[key].cost || upgrades[key].bought;
-    if (upgrades[key].bought) btn.textContent = 'Owned';
-  }
-}
-function buyUpgrade(name) {
-  if (points >= upgrades[name].cost && !upgrades[name].bought) {
-    points -= upgrades[name].cost;
-    upgrades[name].bought = true;
-    upgrades[name].apply();
-    updateShop();
-  }
-}
-function capitalize(str) {
-  return str[0].toUpperCase() + str.slice(1);
-}
+      // Movement
+      const force = 15;
+      if (keys['w']) carBody.velocity.z = -force;
+      if (keys['s']) carBody.velocity.z = force;
+      if (keys['a']) carBody.velocity.x = -force;
+      if (keys['d']) carBody.velocity.x = force;
 
-function startGame() {
-  gameState = "playing";
-  shop.style.display = 'none';
-  player.x = W / 2 - CAR_WIDTH / 2;
-  player.y = H - CAR_HEIGHT - 20;
-  player.speed = 0;
-  distance = 0;
-  scrollY = 0;
-  loop();
-}
+      // Update car mesh from physics
+      car.position.copy(carBody.position);
+      car.quaternion.copy(carBody.quaternion);
 
-// Game loop
-function loop() {
-  if (gameState !== "playing") return;
+      // Camera follow
+      camera.position.lerp(
+        new THREE.Vector3(
+          car.position.x,
+          car.position.y + 5,
+          car.position.z - 10
+        ), 0.05
+      );
+      camera.lookAt(car.position);
 
-  // Update input
-  if (keys['ArrowLeft']) player.x -= player.handling;
-  if (keys['ArrowRight']) player.x += player.handling;
-  if (keys['ArrowUp']) {
-    player.speed += player.accel;
-    if (player.speed > player.maxSpeed) player.speed = player.maxSpeed;
-  } else {
-    player.speed -= player.accel * 0.5;
-    if (player.speed < 0) player.speed = 0;
-  }
+      renderer.render(scene, camera);
+    }
 
-  player.y -= player.speed;
-  distance += player.speed;
+    animate();
 
-  // Check bounds
-  if (player.x < ROAD_LEFT || player.x + CAR_WIDTH > ROAD_RIGHT || player.y < 0) {
-    endGame();
-    return;
-  }
-
-  // Clear
-  ctx.clearRect(0, 0, W, H);
-
-  // Draw road
-  ctx.fillStyle = "#1a7e17";
-  ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = "#555";
-  ctx.fillRect(ROAD_LEFT, 0, ROAD_WIDTH, H);
-  ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(ROAD_LEFT, 0);
-  ctx.lineTo(ROAD_LEFT, H);
-  ctx.moveTo(ROAD_RIGHT, 0);
-  ctx.lineTo(ROAD_RIGHT, H);
-  ctx.stroke();
-
-  // Dashed center line
-  ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 2;
-  ctx.setLineDash([20, 15]);
-  ctx.beginPath();
-  ctx.moveTo(W / 2, 0);
-  ctx.lineTo(W / 2, H);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Draw car
-  ctx.fillStyle = "#ff0000";
-  ctx.fillRect(player.x, player.y, CAR_WIDTH, CAR_HEIGHT);
-  ctx.fillStyle = "#99d9ea";
-  ctx.fillRect(player.x + 10, player.y + 10, 20, 20);
-
-  requestAnimationFrame(loop);
-}
-
-function endGame() {
-  gameState = "gameover";
-  const earned = Math.floor(distance / 10);
-  points += earned;
-  finalDistance.textContent = Math.floor(distance);
-  gameOverText.style.display = 'block';
-  updateShop();
-}
-
-// Controls
-document.addEventListener('keydown', e => {
-  keys[e.key] = true;
-});
-document.addEventListener('keyup', e => {
-  keys[e.key] = false;
-});
-
-// Draw static screen initially
-updateShop();
-ctx.fillStyle = "#fff";
-ctx.font = "20px sans-serif";
-ctx.fillText("Racing Game Loaded - Open Shop to Begin", 200, 300);
-</script>
-
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
 </body>
 </html>
