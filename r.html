@@ -2,123 +2,283 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Retro 3D Racing Game</title>
+  <title>1990’s Retro 3D Racing Game met Upgrades</title>
   <style>
+    /* ────────────────────────────────────────────────────────────────────── */
+    /* Baseline styles voor een retro‑ look */
     body {
       margin: 0;
+      overflow: hidden;
       background: #000;
       font-family: 'Courier New', monospace;
       color: #0ff;
-      overflow: hidden;
     }
-    #info {
+
+    /* Overlay voor controls & stats */
+    #hud {
       position: absolute;
       top: 10px;
       left: 10px;
-      font-size: 14px;
-      color: #0ff;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0, 0, 0, 0.5);
       padding: 8px;
       border: 1px solid #0ff;
+      font-size: 14px;
+      line-height: 1.4em;
     }
+
+    /* Overlay voor de upgradeknoppen */
+    #shop {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border: 1px solid #0ff;
+      font-size: 14px;
+    }
+    #shop button {
+      background: #0ff;
+      border: none;
+      color: #000;
+      padding: 6px 10px;
+      margin: 4px 0;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #shop button:hover {
+      background: #4ff;
+    }
+
+    /* 3D‑canvas vult automatisch de hele pagina */
+    canvas {
+      display: block;
+    }
+    /* ────────────────────────────────────────────────────────────────────── */
   </style>
 </head>
 <body>
-  <div id="info">WASD to drive</div>
+  <!-- HUD: Controls + Stats -->
+  <div id="hud">
+    <div><strong>Controls:</strong> W/A/S/D om te rijden</div>
+    <hr style="border-color: #0ff;">
+    <div><strong>Stats:</strong></div>
+    <div>Max Speed: <span id="statSpeed">6.0</span></div>
+    <div>Acceleration: <span id="statAccel">0.2</span></div>
+    <div>Handling: <span id="statHandling">4.0</span></div>
+  </div>
+
+  <!-- Shop (onbeperkte upgrades) -->
+  <div id="shop">
+    <div><strong>Upgrades (Unlimited)</strong></div>
+    <button id="upgradeEngine">Engine +2 maxSpeed</button><br>
+    <button id="upgradeAccel">Accel +0.05</button><br>
+    <button id="upgradeHandling">Handling +1</button>
+  </div>
+
+  <!-- Three.js en de eigen game‑script -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"></script>
   <script>
-    // Scene + Renderer
+    // ──────────────────────────────────────────────────────────────────────
+    // 1) Setup Three.js scene, camera en renderer
+    // ──────────────────────────────────────────────────────────────────────
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000);
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    scene.background = new THREE.Color(0x000000); 
+    const camera = new THREE.PerspectiveCamera(
+      75, 
+      window.innerWidth / window.innerHeight, 
+      0.1, 
+      1000
+    );
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Lighting
-    const ambient = new THREE.AmbientLight(0x404040, 3);
-    scene.add(ambient);
-    const dirLight = new THREE.DirectionalLight(0x00ffff, 2);
+    // Startcamera: iets achter en boven de startpositie van de auto
+    camera.position.set(0, 5, -10);
+    camera.lookAt(new THREE.Vector3(0, 0.5, 0));
+
+    // ──────────────────────────────────────────────────────────────────────
+    // 2) Licht op de scène (retro neon‑achtige kleur)
+    // ──────────────────────────────────────────────────────────────────────
+    const ambientLight = new THREE.AmbientLight(0x222222, 1.5);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0x00ffff, 1.2);
     dirLight.position.set(10, 20, 10);
     scene.add(dirLight);
 
-    // Retro Grid Road
-    const gridSize = 500;
-    const gridDivs = 100;
-    const gridHelper = new THREE.GridHelper(gridSize, gridDivs, 0x00ffff, 0x004488);
+    // ──────────────────────────────────────────────────────────────────────
+    // 3) Retro‑grid “weg” ondergrond (groot vlak + lijnen)
+    // ──────────────────────────────────────────────────────────────────────
+    // We maken een grote GridHelper met neon‑blauwe lijnen op een zwart vlak
+    const gridSize = 1000;
+    const gridDivisions = 100;
+    const gridHelper = new THREE.GridHelper(
+      gridSize, 
+      gridDivisions, 
+      0x00ffff,  // kleur lijnen
+      0x004488   // kleur axes (niet zichtbaar door rotatie)
+    );
+    // draai de grid flat op de X‑Z vlak
     gridHelper.rotation.x = Math.PI / 2;
     scene.add(gridHelper);
 
-    // Car (simple box)
-    const carGeometry = new THREE.BoxGeometry(1, 0.5, 2);
+    // Zwarte “vloer” onder de grid, om diepte te suggereren
+    const floorGeom = new THREE.PlaneGeometry(gridSize, gridSize);
+    const floorMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const floorMesh = new THREE.Mesh(floorGeom, floorMat);
+    floorMesh.rotation.x = -Math.PI / 2;
+    floorMesh.position.y = -0.01; // net onder de grid
+    scene.add(floorMesh);
+
+    // ──────────────────────────────────────────────────────────────────────
+    // 4) De auto (simpel gekleurd blokje met een beetje hoogte)
+    // ──────────────────────────────────────────────────────────────────────
+    const carWidth = 1;
+    const carHeight = 0.5;
+    const carLength = 2;
+    const carGeometry = new THREE.BoxGeometry(carWidth, carHeight, carLength);
     const carMaterial = new THREE.MeshStandardMaterial({ color: 0xff00ff });
     const car = new THREE.Mesh(carGeometry, carMaterial);
-    car.position.y = 0.5;
+    car.position.set(0, carHeight / 2, 0);
     scene.add(car);
 
-    // Cannon physics
-    const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
+    // ──────────────────────────────────────────────────────────────────────
+    // 5) Speler‑variabelen & stats voor upgrades
+    // ──────────────────────────────────────────────────────────────────────
+    const player = {
+      // positie in 3D‑ruimte
+      pos: new THREE.Vector3(0, 0, 0),
+      // snelheid in X en Z richting (Y blijft constant)
+      vel: new THREE.Vector2(0, 0),
+      // stats (beginwaarden)
+      maxSpeed: 6.0,     // maximale snelheid (units/sec)
+      accel: 0.20,       // versnellingsfactor (units/sec²)
+      handling: 4.0      // laterale snelheid bij sturen
+    };
 
-    const carBody = new CANNON.Body({
-      mass: 1,
-      shape: new CANNON.Box(new CANNON.Vec3(0.5, 0.25, 1)),
-      position: new CANNON.Vec3(0, 0.5, 0),
-      linearDamping: 0.9
+    // DOM: referenties naar stat‑weergave in HUD
+    const statSpeedEl = document.getElementById('statSpeed');
+    const statAccelEl = document.getElementById('statAccel');
+    const statHandlingEl = document.getElementById('statHandling');
+
+    function updateHUD() {
+      statSpeedEl.textContent = player.maxSpeed.toFixed(1);
+      statAccelEl.textContent = player.accel.toFixed(2);
+      statHandlingEl.textContent = player.handling.toFixed(1);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // 6) Input (W/A/S/D)
+    // ──────────────────────────────────────────────────────────────────────
+    const keys = { w:false, a:false, s:false, d:false };
+    window.addEventListener('keydown', e => {
+      const k = e.key.toLowerCase();
+      if (k in keys) { keys[k] = true; e.preventDefault(); }
     });
-    world.addBody(carBody);
-
-    const groundBody = new CANNON.Body({
-      mass: 0,
-      shape: new CANNON.Plane()
+    window.addEventListener('keyup', e => {
+      const k = e.key.toLowerCase();
+      if (k in keys) { keys[k] = false; e.preventDefault(); }
     });
-    groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
-    world.addBody(groundBody);
 
-    // Input
-    const keys = {};
-    window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
-    window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+    // ──────────────────────────────────────────────────────────────────────
+    // 7) Upgrade‑buttons (onbeperkt aanklikken)
+    // ──────────────────────────────────────────────────────────────────────
+    document.getElementById('upgradeEngine').addEventListener('click', () => {
+      player.maxSpeed += 2.0;
+      updateHUD();
+    });
+    document.getElementById('upgradeAccel').addEventListener('click', () => {
+      player.accel += 0.05;
+      updateHUD();
+    });
+    document.getElementById('upgradeHandling').addEventListener('click', () => {
+      player.handling += 1.0;
+      updateHUD();
+    });
 
-    // Loop
+    // Direct de HUD updaten bij start
+    updateHUD();
+
+    // ──────────────────────────────────────────────────────────────────────
+    // 8) Animatielus: beweging en rendering
+    // ──────────────────────────────────────────────────────────────────────
     const clock = new THREE.Clock();
 
     function animate() {
       requestAnimationFrame(animate);
-      const delta = clock.getDelta();
-      world.step(1/60, delta, 3);
 
-      // Movement
-      const force = 15;
-      if (keys['w']) carBody.velocity.z = -force;
-      if (keys['s']) carBody.velocity.z = force;
-      if (keys['a']) carBody.velocity.x = -force;
-      if (keys['d']) carBody.velocity.x = force;
+      const delta = clock.getDelta(); // tijd (in sec) sinds vorige frame
 
-      // Update car mesh from physics
-      car.position.copy(carBody.position);
-      car.quaternion.copy(carBody.quaternion);
+      // ── A) Versnelling/deceleratie in Z‑richting ─────────────────────────
+      // W: gas vooruit (negatieve Z); S: rem/bak (positieve Z)
+      if (keys.w) {
+        player.vel.y -= player.accel;
+        if (player.vel.y < -player.maxSpeed) {
+          player.vel.y = -player.maxSpeed;
+        }
+      } else if (keys.s) {
+        player.vel.y += player.accel;
+        if (player.vel.y > player.maxSpeed) {
+          player.vel.y = player.maxSpeed;
+        }
+      } else {
+        // natuurlijke vertraging (demping)
+        player.vel.y *= 0.94;
+        if (Math.abs(player.vel.y) < 0.01) player.vel.y = 0;
+      }
 
-      // Camera follow
-      camera.position.lerp(
-        new THREE.Vector3(
-          car.position.x,
-          car.position.y + 5,
-          car.position.z - 10
-        ), 0.05
+      // ── B) Lateral (X‑richting) beweging ────────────────────────────────
+      if (keys.a) {
+        player.vel.x -= player.handling * delta * 20;
+        if (player.vel.x < -player.maxSpeed) player.vel.x = -player.maxSpeed;
+      } else if (keys.d) {
+        player.vel.x += player.handling * delta * 20;
+        if (player.vel.x > player.maxSpeed) player.vel.x = player.maxSpeed;
+      } else {
+        // remmen in X‑richting als je niet stuurt
+        player.vel.x *= 0.86;
+        if (Math.abs(player.vel.x) < 0.01) player.vel.x = 0;
+      }
+
+      // ── C) Update spelerpositie ────────────────────────────────────────
+      player.pos.x += player.vel.x * delta;
+      player.pos.z += player.vel.y * delta;
+
+      // Houd auto binnen de “weg” (± gridSize/2)
+      const bound = gridSize / 2 - 2;
+      if (player.pos.x < -bound) player.pos.x = -bound;
+      if (player.pos.x > bound) player.pos.x = bound;
+      if (player.pos.z < -bound) player.pos.z = -bound;
+      if (player.pos.z > bound) player.pos.z = bound;
+
+      // Zet de zichtbare mesh op wĳe van spelerpositie
+      car.position.set(player.pos.x, carHeight/2, player.pos.z);
+
+      // ── D) Camera volgt de auto (met een lichte trailing/lerp) ──────────
+      const desiredCamPos = new THREE.Vector3(
+        player.pos.x, 
+        player.pos.y + 5, 
+        player.pos.z - 10
       );
+      camera.position.lerp(desiredCamPos, 0.06); 
       camera.lookAt(car.position);
 
+      // ── E) Render de scène ──────────────────────────────────────────────
       renderer.render(scene, camera);
     }
 
     animate();
 
+    // ──────────────────────────────────────────────────────────────────────
+    // 9) Responsief schalen bij vensterwijziging
+    // ──────────────────────────────────────────────────────────────────────
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
+    // ──────────────────────────────────────────────────────────────────────
   </script>
 </body>
 </html>
