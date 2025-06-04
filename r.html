@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>1990s 3D Racing Game</title>
   <style>
     body {
@@ -41,13 +41,13 @@
     <hr style="border-color: #0ff;">
     <div>Max Speed: <span id="statSpeed">6.0</span></div>
     <div>Acceleration: <span id="statAccel">0.2</span></div>
-    <div>Handling: <span id="statHandling">4.0</span></div>
+    <div>Handling: <span id="statHandling">2.0</span></div>
   </div>
   <div id="shop">
     <strong>Upgrades</strong><br>
     <button id="upgradeEngine">Engine +2</button><br>
     <button id="upgradeAccel">Accel +0.05</button><br>
-    <button id="upgradeHandling">Handling +1</button>
+    <button id="upgradeHandling">Handling +0.5</button>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
   <script>
@@ -84,11 +84,13 @@
 
     const player = {
       pos: new THREE.Vector3(0, 0, 0),
-      vel: new THREE.Vector2(0, 0),
       maxSpeed: 6.0,
       accel: 0.2,
-      handling: 4.0
+      handling: 2.0
     };
+
+    let angle = 0;    // richting waarin de auto kijkt
+    let speed = 0;    // voorwaartse snelheid
 
     const keys = { w: false, a: false, s: false, d: false };
     window.addEventListener('keydown', e => { if (keys.hasOwnProperty(e.key)) keys[e.key] = true; });
@@ -96,7 +98,7 @@
 
     document.getElementById('upgradeEngine').onclick = () => { player.maxSpeed += 2; updateHUD(); };
     document.getElementById('upgradeAccel').onclick = () => { player.accel += 0.05; updateHUD(); };
-    document.getElementById('upgradeHandling').onclick = () => { player.handling += 1; updateHUD(); };
+    document.getElementById('upgradeHandling').onclick = () => { player.handling += 0.5; updateHUD(); };
 
     function updateHUD() {
       document.getElementById('statSpeed').textContent = player.maxSpeed.toFixed(1);
@@ -110,43 +112,42 @@
       requestAnimationFrame(animate);
       const delta = clock.getDelta();
 
-      // Forward/backward movement (Z+ is forward)
+      // Beweging
       if (keys.w) {
-        player.vel.y += player.accel;
-        if (player.vel.y > player.maxSpeed) player.vel.y = player.maxSpeed;
+        speed += player.accel;
+        if (speed > player.maxSpeed) speed = player.maxSpeed;
       } else if (keys.s) {
-        player.vel.y -= player.accel;
-        if (player.vel.y < -player.maxSpeed) player.vel.y = -player.maxSpeed;
+        speed -= player.accel;
+        if (speed < -player.maxSpeed) speed = -player.maxSpeed;
       } else {
-        player.vel.y *= 0.94;
-        if (Math.abs(player.vel.y) < 0.01) player.vel.y = 0;
+        speed *= 0.94;
+        if (Math.abs(speed) < 0.01) speed = 0;
       }
 
-      // Left/right movement (X axis)
+      // Rotatie
       if (keys.a) {
-        player.vel.x -= player.handling * delta * 20;
-        if (player.vel.x < -player.maxSpeed) player.vel.x = -player.maxSpeed;
-      } else if (keys.d) {
-        player.vel.x += player.handling * delta * 20;
-        if (player.vel.x > player.maxSpeed) player.vel.x = player.maxSpeed;
-      } else {
-        player.vel.x *= 0.86;
-        if (Math.abs(player.vel.x) < 0.01) player.vel.x = 0;
+        angle += player.handling * delta;
+      }
+      if (keys.d) {
+        angle -= player.handling * delta;
       }
 
-      // Update position
-      player.pos.x += player.vel.x * delta;
-      player.pos.z += player.vel.y * delta;
+      // Nieuwe positie berekenen op basis van heading
+      player.pos.x += Math.sin(angle) * speed * delta;
+      player.pos.z += Math.cos(angle) * speed * delta;
 
-      const bound = 500;
-      player.pos.x = Math.max(-bound, Math.min(bound, player.pos.x));
-      player.pos.z = Math.max(-bound, Math.min(bound, player.pos.z));
-
+      // Auto updaten
       car.position.set(player.pos.x, 0.25, player.pos.z);
+      car.rotation.y = -angle;
 
-      // Camera follows behind
-      const desiredCamPos = new THREE.Vector3(player.pos.x, 5, player.pos.z - 10);
-      camera.position.lerp(desiredCamPos, 0.06);
+      // Camera achter de auto
+      const camOffset = new THREE.Vector3(
+        Math.sin(angle) * -10,
+        5,
+        Math.cos(angle) * -10
+      );
+      const desiredCamPos = new THREE.Vector3().addVectors(car.position, camOffset);
+      camera.position.lerp(desiredCamPos, 0.1);
       camera.lookAt(car.position);
 
       renderer.render(scene, camera);
