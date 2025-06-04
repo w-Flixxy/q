@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🏁 HTML5 Racing Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #222;
+      color: white;
+      font-family: monospace;
+    }
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 2;
+    }
+  </style>
+</head>
+<body>
+
+<div id="hud">
+  <div>Speed: <span id="speed">0</span></div>
+  <div>Lap: <span id="lap">0</span></div>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  // Track and checkpoints
+  const track = {
+    width: 800,
+    height: 600,
+    innerMargin: 100,
+    outerMargin: 50
+  };
+
+  let keys = {};
+  document.addEventListener('keydown', e => keys[e.key] = true);
+  document.addEventListener('keyup', e => keys[e.key] = false);
+
+  class Car {
+    constructor(x, y, color = 'red') {
+      this.x = x;
+      this.y = y;
+      this.speed = 0;
+      this.acceleration = 0.2;
+      this.maxSpeed = 5;
+      this.friction = 0.05;
+      this.angle = 0;
+      this.turnSpeed = 3;
+      this.width = 40;
+      this.height = 20;
+      this.lap = 0;
+      this.checkpointPassed = false;
+      this.color = color;
+    }
+
+    update() {
+      // Acceleration and braking
+      if (keys['ArrowUp']) this.speed += this.acceleration;
+      if (keys['ArrowDown']) this.speed -= this.acceleration;
+      
+      // Limit speed
+      this.speed = Math.max(Math.min(this.speed, this.maxSpeed), -this.maxSpeed / 2);
+      
+      // Friction
+      if (!keys['ArrowUp'] && !keys['ArrowDown']) {
+        this.speed *= (1 - this.friction);
+        if (Math.abs(this.speed) < 0.05) this.speed = 0;
+      }
+
+      // Turning
+      if (this.speed !== 0) {
+        const direction = this.speed > 0 ? 1 : -1;
+        if (keys['ArrowLeft']) this.angle -= this.turnSpeed * direction * 0.03;
+        if (keys['ArrowRight']) this.angle += this.turnSpeed * direction * 0.03;
+      }
+
+      // Position update
+      this.x += Math.cos(this.angle) * this.speed;
+      this.y += Math.sin(this.angle) * this.speed;
+
+      // Lap logic
+      if (this.y > track.height / 2 && this.y < track.height / 2 + 10 && !this.checkpointPassed) {
+        this.checkpointPassed = true;
+      }
+
+      if (this.y < track.height / 2 && this.checkpointPassed && this.x > track.width / 2 - 30 && this.x < track.width / 2 + 30) {
+        this.lap++;
+        this.checkpointPassed = false;
+      }
+
+      // Boundary collisions
+      const dx = this.x - track.width / 2;
+      const dy = this.y - track.height / 2;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const maxRadius = track.width / 2 - track.outerMargin;
+      const minRadius = track.width / 2 - track.innerMargin;
+      if (distance > maxRadius || distance < minRadius) {
+        this.speed *= -0.4;
+      }
+    }
+
+    draw(ctx) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.angle);
+      ctx.fillStyle = this.color;
+      ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+      ctx.restore();
+    }
+  }
+
+  const player = new Car(track.width / 2, track.height / 2 + 120);
+
+  function drawTrack(ctx) {
+    ctx.save();
+    ctx.translate(canvas.width / 2 - track.width / 2, canvas.height / 2 - track.height / 2);
+
+    // Outer boundary
+    ctx.beginPath();
+    ctx.arc(track.width / 2, track.height / 2, track.width / 2 - track.outerMargin, 0, Math.PI * 2);
+    ctx.fillStyle = '#555';
+    ctx.fill();
+
+    // Inner grass
+    ctx.beginPath();
+    ctx.arc(track.width / 2, track.height / 2, track.width / 2 - track.innerMargin, 0, Math.PI * 2);
+    ctx.fillStyle = '#222';
+    ctx.fill();
+
+    // Start/finish line
+    ctx.fillStyle = 'white';
+    ctx.fillRect(track.width / 2 - 10, track.height / 2 - 80, 20, 60);
+
+    ctx.restore();
+  }
+
+  function update() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawTrack(ctx);
+
+    player.update();
+    ctx.save();
+    ctx.translate(canvas.width / 2 - track.width / 2, canvas.height / 2 - track.height / 2);
+    player.draw(ctx);
+    ctx.restore();
+
+    document.getElementById('speed').textContent = player.speed.toFixed(2);
+    document.getElementById('lap').textContent = player.lap;
+    
+    requestAnimationFrame(update);
+  }
+
+  update();
+</script>
+
+</body>
+</html>
