@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Wheel of Fate</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #111;
+      color: white;
+      text-align: center;
+      padding-top: 50px;
+    }
+
+    .wheel-container {
+      position: relative;
+      width: 400px;
+      height: 400px;
+      margin: 0 auto;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 10px solid #444;
+      box-shadow: 0 0 20px rgba(255,255,255,0.2);
+    }
+
+    .wheel {
+      width: 100%;
+      height: 100%;
+      transform: rotate(0deg);
+      transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1);
+    }
+
+    .segment {
+      position: absolute;
+      width: 50%;
+      height: 50%;
+      background: #2c3e50;
+      transform-origin: 100% 100%;
+      text-align: right;
+      padding-right: 10px;
+      line-height: 2;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .segment:nth-child(odd) {
+      background: #34495e;
+    }
+
+    .pointer {
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0; 
+      height: 0; 
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-bottom: 20px solid red;
+    }
+
+    button {
+      margin-top: 40px;
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #e74c3c;
+      border: none;
+      color: white;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    #result {
+      margin-top: 30px;
+      font-size: 24px;
+      color: #1abc9c;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎡 Wheel of Fate</h1>
+
+  <div class="wheel-container">
+    <div class="pointer"></div>
+    <div class="wheel" id="wheel"></div>
+  </div>
+
+  <button onclick="spinWheel()">SPIN</button>
+  <div id="result"></div>
+
+  <script>
+    const segments = [
+      'Attack',
+      'Heal',
+      'Loot',
+      'Trap',
+      'Magic',
+      'Block',
+      'Curse',
+      'Gold'
+    ];
+
+    const wheel = document.getElementById('wheel');
+    const result = document.getElementById('result');
+
+    // Create segments
+    const numSegments = segments.length;
+    for (let i = 0; i < numSegments; i++) {
+      const segment = document.createElement('div');
+      segment.classList.add('segment');
+      const angle = 360 / numSegments;
+      segment.style.transform = `rotate(${i * angle}deg) skewY(-${90 - angle}deg)`;
+      segment.innerHTML = segments[i];
+      wheel.appendChild(segment);
+    }
+
+    let spinning = false;
+
+    function spinWheel() {
+      if (spinning) return;
+      spinning = true;
+
+      const anglePerSegment = 360 / numSegments;
+      const randomIndex = Math.floor(Math.random() * numSegments);
+      const fullSpins = 5;
+      const targetAngle = 360 * fullSpins + (360 - randomIndex * anglePerSegment) - (anglePerSegment / 2);
+
+      wheel.style.transition = 'transform 5s cubic-bezier(0.33, 1, 0.68, 1)';
+      wheel.style.transform = `rotate(${targetAngle}deg)`;
+
+      setTimeout(() => {
+        result.textContent = `🎯 You landed on: ${segments[randomIndex]}!`;
+        spinning = false;
+      }, 5000);
+    }
+  </script>
+
+</body>
+</html>
